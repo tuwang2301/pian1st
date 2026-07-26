@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-dark: #0B0C10;
+  --surface-dark: #16181E;
+  --surface-hover: #21242E;
+  --brass-gold: #D4AF37;
+  --brass-light: #F3E197;
+  --pearl-ivory: #F5F2EB;
+  --ebony-black: #121316;
+  --metal-border: #2B2E38;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--pearl-ivory);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0C10;
+}
+::-webkit-scrollbar-thumb {
+  background: #2B2E38;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Pulse animation for active playback beats */
+@keyframes pulse-brass {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+    border-color: #D4AF37;
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(243, 225, 151, 0.8);
+    border-color: #F3E197;
+  }
+}
+
+.animate-pulse-brass {
+  animation: pulse-brass 1.2s infinite ease-in-out;
+}
+
+/* Piano key glow */
+.key-glow-brass {
+  box-shadow: inset 0 -10px 20px rgba(212, 175, 55, 0.5), 0 0 15px rgba(212, 175, 55, 0.8);
+}

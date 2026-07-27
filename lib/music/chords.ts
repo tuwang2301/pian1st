@@ -124,25 +124,36 @@ export interface PianoNotes {
   allMidi: number[];     // Combined unique sorted MIDI notes
 }
 
-// Get full piano voicing for a chord (Default octave = 3 for warm acoustic tone)
+// Get full acoustic piano voicing for a chord (Bass: Root+5th in Octave 2; Treble: Smooth spread in Octave 3-4)
 export function getPianoVoicing(chordStr: string, octave: number = 3): PianoNotes {
   const parsed = parseChord(chordStr);
   const rootIndex = NOTE_NAMES.indexOf(parsed.root);
-  const rootBaseMidi = (octave + 1) * 12 + rootIndex; // Octave 4 for right hand (MIDI 60)
 
-  // Get quality intervals
-  const intervals = CHORD_FORMULAS[parsed.quality] || CHORD_FORMULAS[''];
-
-  // Treble notes (Right Hand) around octave 3-4 (MIDI 48-60)
-  const trebleMidi = intervals.map(semitone => rootBaseMidi + semitone);
-
-  // Bass note (Left Hand) around octave 2 (MIDI 36-48)
+  // Bass (Left Hand): Root + 5th (Quinta) around Octave 2 (MIDI 36-48) - rich & punchy
   const bassRoot = parsed.bass ? parsed.bass : parsed.root;
   const bassIndex = NOTE_NAMES.indexOf(bassRoot);
-  const bassMidi1 = (octave - 1) * 12 + bassIndex; // Octave 2
-  const bassMidi2 = bassMidi1 - 12;                 // Octave 1
+  const bassMidiRoot = octave * 12 + bassIndex;      // e.g. C2 (MIDI 36)
+  const bassMidiFifth = bassMidiRoot + 7;             // e.g. G2 (MIDI 43)
 
-  const bassMidi = [bassMidi2, bassMidi1];
+  const bassMidi = [bassMidiRoot, bassMidiFifth];
+
+  // Treble (Right Hand): Spread in Octave 3-4 (MIDI 48-67)
+  const rootBaseMidi = (octave + 1) * 12 + rootIndex; // e.g. C3 (MIDI 48) or C4 (MIDI 60)
+  const intervals = CHORD_FORMULAS[parsed.quality] || CHORD_FORMULAS[''];
+
+  let trebleMidi = intervals.map(semitone => rootBaseMidi + semitone);
+
+  // Keep treble notes within warm center region (MIDI 48 to 67, C3 to G4)
+  trebleMidi = trebleMidi.map(midi => {
+    while (midi > 67) midi -= 12;
+    while (midi < 48) midi += 12;
+    return midi;
+  }).sort((a, b) => a - b);
+
+  // If treble has only 3 notes, add an octave top note for rich acoustic piano resonance
+  if (trebleMidi.length === 3 && trebleMidi[0] + 12 <= 72) {
+    trebleMidi.push(trebleMidi[0] + 12);
+  }
 
   const allMidiSet = new Set([...bassMidi, ...trebleMidi]);
   const allMidi = Array.from(allMidiSet).sort((a, b) => a - b);

@@ -224,22 +224,25 @@ class ChordPadEngine {
 
     this.previousTrebleMidi = ledTreble;
 
-    const velocityGain = { soft: 0.55, medium: 0.82, strong: 1.0 }[settings.velocity];
-    const now = ctx.currentTime + 0.01; // tiny offset to prevent click
+    const velocityGain = { soft: 0.6, medium: 0.88, strong: 1.05 }[settings.velocity];
+    const now = ctx.currentTime + 0.01;
 
-    // Play bass notes (left hand)
+    // 1. Play Bass notes (Left Hand - Root + 5th Quinta) with punchy warm attack
+    const bassStagger = 0.025; // 25ms delay between root and 5th
     voicing.bassMidi.forEach((midi, i) => {
-      const delay = i * 0.02; // slight stagger for natural feel
-      this.playNote(midi, now + delay, settings.sustain * 0.8, velocityGain * 0.85, settings.pianoType);
+      const delay = i * bassStagger;
+      this.playNote(midi, now + delay, settings.sustain * 1.1, velocityGain * 0.95, settings.pianoType);
     });
 
-    // Play treble notes (right hand, voice-led)
+    // 2. Play Treble notes (Right Hand - Voice Led) with natural fingerpicking roll
+    const bassTotalDuration = voicing.bassMidi.length * bassStagger;
+    const trebleRollSpread = 0.03; // 30ms natural roll between treble notes
     ledTreble.forEach((midi, i) => {
-      const delay = i * 0.025; // arpeggio-style slight spread
-      this.playNote(midi, now + delay, settings.sustain, velocityGain, settings.pianoType);
+      const delay = bassTotalDuration + (i * trebleRollSpread);
+      this.playNote(midi, now + delay, settings.sustain, velocityGain * (1.0 - i * 0.04), settings.pianoType);
     });
 
-    // Immediately load any missing samples for future use
+    // Preload any un-cached notes asynchronously for seamless future plays
     [...voicing.bassMidi, ...ledTreble].forEach(midi => {
       this.loadSample(midi, settings.pianoType);
     });

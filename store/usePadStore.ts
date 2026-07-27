@@ -1,4 +1,4 @@
-// Zustand store for Pian1st — Chord Pad Live Play Mode with Pattern Tracker
+// Zustand store for Pian1st — 2-Handed Live Chord Pad Mode (ASDF + Arrow Keys)
 
 import { create } from 'zustand';
 import { NoteName, transposeChord } from '../lib/music/chords';
@@ -6,46 +6,24 @@ import { padEngine, AudioSettings, DEFAULT_AUDIO_SETTINGS } from '../lib/audio/p
 import { metronomeEngine } from '../lib/audio/metronomeEngine';
 import { parseChordSheet } from '../lib/music/chordParser';
 
-export const ERGONOMIC_HOTKEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
+export const LEFT_HAND_HOTKEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
 
-export interface SequenceItem {
+export interface PadItem {
   id: string;
   chord: string;
   lyric?: string;
 }
 
-export interface UniquePad {
-  chord: string;
-  hotkey: string;
-  category: 'primary' | 'secondary' | 'passing';
+export interface LineProgression {
+  id: string;
+  lineName: string;
+  chords: PadItem[];
 }
 
 export interface PadSection {
   id: string;
   name: string;
-  sequence: SequenceItem[];
-  uniquePads: UniquePad[];
-}
-
-export function buildUniquePads(sequence: SequenceItem[]): UniquePad[] {
-  const seen = new Set<string>();
-  const uniquePads: UniquePad[] = [];
-
-  for (const item of sequence) {
-    if (!seen.has(item.chord)) {
-      seen.add(item.chord);
-      const idx = uniquePads.length;
-      if (idx >= ERGONOMIC_HOTKEYS.length) break;
-
-      const hotkey = ERGONOMIC_HOTKEYS[idx];
-      const category: UniquePad['category'] =
-        idx < 4 ? 'primary' : idx < 8 ? 'secondary' : 'passing';
-
-      uniquePads.push({ chord: item.chord, hotkey, category });
-    }
-  }
-
-  return uniquePads;
+  lines: LineProgression[];
 }
 
 export interface PadState {
@@ -60,11 +38,11 @@ export interface PadState {
   isRecording: boolean;
   isLooping: boolean;
 
-  // Sections / Pads
+  // Sections & Line Navigation
   sections: PadSection[];
   activeSectionId: string;
-  activePadKey: string | null;         // `${sectionId}:${uniquePadIndex}`
-  activeSequenceIndex: number;          // Current step in Sequence Ribbon
+  activeLineIndex: number;
+  activeChordIndex: number;
 
   // Audio Settings
   audioSettings: AudioSettings;
@@ -84,88 +62,124 @@ export interface PadState {
   stopLoop: () => void;
   clearLoop: () => void;
 
-  // Section management
+  // Section & Line Management
   setActiveSection: (id: string) => void;
+  setActiveLineIndex: (idx: number) => void;
+  stepLine: (direction: 'next' | 'prev') => void;
   updateSectionName: (id: string, name: string) => void;
   addChordToSection: (sectionId: string, chord: string, lyric?: string) => void;
   removeChordFromSection: (sectionId: string, idx: number) => void;
-  addSection: () => void;
   removeSection: (id: string) => void;
+
+  // Triggering
+  triggerChordInLine: (lineIdx: number, chordIdx: number) => void;
+  triggerLeftHandHotkey: (key: string) => void;
 
   // Chord sheet parser
   setChordSheetText: (text: string) => void;
   parseAndLoadChordSheet: () => void;
 
-  // Audio
+  // Audio settings
   updateAudioSettings: (partial: Partial<AudioSettings>) => void;
-
-  // Pad trigger (by unique pad index 0-11 or hotkey)
-  triggerPad: (sectionId: string, padIdx: number) => void;
-  triggerPadByHotkey: (hotkey: string) => void;
-  stepSequence: (direction: 'next' | 'prev') => void;
 
   // Presets
   loadTimEmPreset: () => void;
-  loadNeuNhuTaChangConPreset: () => void;
+  loadVanLuonLaAnhPreset: () => void;
 }
 
-const DEFAULT_TIM_EM_SEQUENCE: SequenceItem[] = [
-  { id: 'te-1', chord: 'C', lyric: 'Tìm em giữa' },
-  { id: 'te-2', chord: 'G/B', lyric: 'đêm dài' },
-  { id: 'te-3', chord: 'Am', lyric: 'côi cút' },
-  { id: 'te-4', chord: 'Em/G', lyric: 'bóng hình' },
-  { id: 'te-5', chord: 'F', lyric: 'Dù biết em' },
-  { id: 'te-6', chord: 'C/E', lyric: 'xa rồi' },
-  { id: 'te-7', chord: 'Dm7', lyric: 'mãi mãi' },
-  { id: 'te-8', chord: 'G7', lyric: 'không về...' },
-  { id: 'te-9', chord: 'C', lyric: 'Tìm em giữa' },
-  { id: 'te-10', chord: 'G/B', lyric: 'đêm dài' },
-  { id: 'te-11', chord: 'Am', lyric: 'côi cút' },
-  { id: 'te-12', chord: 'Em/G', lyric: 'bóng hình' },
-  { id: 'te-13', chord: 'F', lyric: 'Dù biết em' },
-  { id: 'te-14', chord: 'C/E', lyric: 'xa rồi' },
-  { id: 'te-15', chord: 'Dm7', lyric: 'mãi mãi' },
-  { id: 'te-16', chord: 'G7', lyric: 'không về...' },
-];
+// Preset data for "Vẫn Luôn Là Anh / Nếu Mai Sau"
+const PRESET_VAN_LUON_LA_ANH_SECTION: PadSection = {
+  id: 'sec-vanluonlaanh',
+  name: 'Bài Hát: Vẫn Luôn Là Anh',
+  lines: [
+    {
+      id: 'l1',
+      lineName: 'Vòng A (Verse 1 - Nửa đầu)',
+      chords: [
+        { id: '1', chord: 'Gm', lyric: 'Vẫn luôn là' },
+        { id: '2', chord: 'A', lyric: 'Bây giờ muốn nói' },
+        { id: '3', chord: 'Dm', lyric: 'với em sau' },
+        { id: '4', chord: 'Bb', lyric: 'này' },
+      ],
+    },
+    {
+      id: 'l2',
+      lineName: 'Vòng B (Verse 1 - Nửa sau)',
+      chords: [
+        { id: '5', chord: 'Gm', lyric: 'Dẫu có dối' },
+        { id: '6', chord: 'C', lyric: 'gian, em' },
+        { id: '7', chord: 'F', lyric: 'đừng trách' },
+        { id: '8', chord: 'Bb', lyric: 'than mùa' },
+        { id: '9', chord: 'Gm', lyric: 'đông đã' },
+        { id: '10', chord: 'A', lyric: 'làm ta' },
+        { id: '11', chord: 'Dm', lyric: 'tan vỡ' },
+      ],
+    },
+    {
+      id: 'l3',
+      lineName: 'Chorus (Điệp Khúc)',
+      chords: [
+        { id: '12', chord: 'Gm', lyric: 'Nếu mai sau này' },
+        { id: '13', chord: 'C', lyric: 'nhớ đến nhau' },
+        { id: '14', chord: 'F', lyric: 'quay về giây' },
+        { id: '15', chord: 'Bb', lyric: 'phút đầu' },
+        { id: '16', chord: 'Gm', lyric: 'Hãy nói với' },
+        { id: '17', chord: 'A', lyric: 'anh ở bên' },
+        { id: '18', chord: 'Dm', lyric: 'nhau...' },
+      ],
+    },
+  ],
+};
 
-const DEFAULT_NEU_NHU_TA_SEQUENCE: SequenceItem[] = [
-  { id: 'nn-1', chord: 'C', lyric: 'Nếu như ta' },
-  { id: 'nn-2', chord: 'E7/G#', lyric: 'chẳng còn' },
-  { id: 'nn-3', chord: 'Am', lyric: 'gặp lại nhau' },
-  { id: 'nn-4', chord: 'C/G', lyric: 'sau vỡ tan' },
-  { id: 'nn-5', chord: 'F', lyric: 'Liệu anh có' },
-  { id: 'nn-6', chord: 'C/E', lyric: 'tiếc nuối' },
-  { id: 'nn-7', chord: 'Dm7', lyric: 'những dở dang' },
-  { id: 'nn-8', chord: 'G7', lyric: 'ngày qua...' },
-  { id: 'nn-9', chord: 'C', lyric: 'Nếu như ta' },
-  { id: 'nn-10', chord: 'E7/G#', lyric: 'chẳng còn' },
-  { id: 'nn-11', chord: 'Am', lyric: 'gặp lại nhau' },
-  { id: 'nn-12', chord: 'C/G', lyric: 'sau vỡ tan' },
-  { id: 'nn-13', chord: 'F', lyric: 'Liệu anh có' },
-  { id: 'nn-14', chord: 'C/E', lyric: 'tiếc nuối' },
-  { id: 'nn-15', chord: 'Dm7', lyric: 'những dở dang' },
-  { id: 'nn-16', chord: 'G7', lyric: 'ngày qua...' },
-];
+const PRESET_TIM_EM_SECTION: PadSection = {
+  id: 'sec-timem',
+  name: 'Bài Hát: Tìm Em',
+  lines: [
+    {
+      id: 'te-l1',
+      lineName: 'Verse (Phiên Khúc)',
+      chords: [
+        { id: 't1', chord: 'C', lyric: 'Tìm em giữa' },
+        { id: 't2', chord: 'G/B', lyric: 'đêm dài' },
+        { id: 't3', chord: 'Am', lyric: 'côi cút' },
+        { id: 't4', chord: 'Em/G', lyric: 'bóng hình' },
+        { id: 't5', chord: 'F', lyric: 'Dù biết em' },
+        { id: 't6', chord: 'C/E', lyric: 'xa rồi' },
+        { id: 't7', chord: 'Dm7', lyric: 'mãi mãi' },
+        { id: 't8', chord: 'G7', lyric: 'không về...' },
+      ],
+    },
+    {
+      id: 'te-l2',
+      lineName: 'Chorus (Điệp Khúc)',
+      chords: [
+        { id: 'tc1', chord: 'C', lyric: 'Tìm em ở đâu' },
+        { id: 'tc2', chord: 'G', lyric: 'trong ký ức' },
+        { id: 'tc3', chord: 'Am', lyric: 'ngàn nỗi nhớ' },
+        { id: 'tc4', chord: 'Em', lyric: 'đong đầy' },
+        { id: 'tc5', chord: 'F', lyric: 'Đành buông tay' },
+        { id: 'tc6', chord: 'C', lyric: 'nhau người ơi' },
+        { id: 'tc7', chord: 'Dm7', lyric: 'từ đây...' },
+        { id: 'tc8', chord: 'G7', lyric: '...' },
+      ],
+    },
+  ],
+};
 
 export const usePadStore = create<PadState>((set, get) => ({
-  songTitle: 'Tìm Em',
-  key: 'C',
+  songTitle: 'Vẫn Luôn Là Anh',
+  key: 'D',
   bpm: 85,
   isMetronomeRunning: false,
   activeBeat: 0,
   isRecording: false,
   isLooping: false,
-  sections: [
-    {
-      id: 'te-verse',
-      name: 'Verse (Phiên Khúc)',
-      sequence: DEFAULT_TIM_EM_SEQUENCE,
-      uniquePads: buildUniquePads(DEFAULT_TIM_EM_SEQUENCE),
-    },
-  ],
-  activeSectionId: 'te-verse',
-  activePadKey: null,
-  activeSequenceIndex: 0,
+
+  sections: [PRESET_VAN_LUON_LA_ANH_SECTION],
+  activeSectionId: 'sec-vanluonlaanh',
+  activeLineIndex: 0,
+  activeChordIndex: -1,
+
   audioSettings: DEFAULT_AUDIO_SETTINGS,
   chordSheetText: '',
 
@@ -176,17 +190,16 @@ export const usePadStore = create<PadState>((set, get) => ({
     const noteOrder: NoteName[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const diff = noteOrder.indexOf(key) - noteOrder.indexOf(oldKey);
 
-    const sections = get().sections.map(s => {
-      const newSeq = s.sequence.map(item => ({
-        ...item,
-        chord: transposeChord(item.chord, diff),
-      }));
-      return {
-        ...s,
-        sequence: newSeq,
-        uniquePads: buildUniquePads(newSeq),
-      };
-    });
+    const sections = get().sections.map(s => ({
+      ...s,
+      lines: s.lines.map(line => ({
+        ...line,
+        chords: line.chords.map(c => ({
+          ...c,
+          chord: transposeChord(c.chord, diff),
+        })),
+      })),
+    }));
     set({ key, sections });
   },
 
@@ -212,7 +225,8 @@ export const usePadStore = create<PadState>((set, get) => ({
 
   startRecording: () => {
     metronomeEngine.setTriggerPadCallback((sectionId, padIdx) => {
-      get().triggerPad(sectionId, padIdx);
+      const lineIdx = get().activeLineIndex;
+      get().triggerChordInLine(lineIdx, padIdx);
     });
     metronomeEngine.startRecording();
     set({ isRecording: true, isLooping: false });
@@ -237,7 +251,25 @@ export const usePadStore = create<PadState>((set, get) => ({
   },
 
   setActiveSection: (id) => {
-    set({ activeSectionId: id, activePadKey: null, activeSequenceIndex: 0 });
+    set({ activeSectionId: id, activeLineIndex: 0, activeChordIndex: -1 });
+    padEngine.resetPreviousChord();
+  },
+
+  setActiveLineIndex: (idx: number) => {
+    set({ activeLineIndex: idx, activeChordIndex: -1 });
+    padEngine.resetPreviousChord();
+  },
+
+  stepLine: (direction: 'next' | 'prev') => {
+    const section = get().sections.find(s => s.id === get().activeSectionId);
+    if (!section || section.lines.length === 0) return;
+
+    const currentLineIdx = get().activeLineIndex;
+    const nextLineIdx = direction === 'next'
+      ? (currentLineIdx + 1) % section.lines.length
+      : (currentLineIdx <= 0 ? section.lines.length - 1 : currentLineIdx - 1);
+
+    set({ activeLineIndex: nextLineIdx, activeChordIndex: -1 });
     padEngine.resetPreviousChord();
   },
 
@@ -249,12 +281,15 @@ export const usePadStore = create<PadState>((set, get) => ({
     set({
       sections: get().sections.map(s => {
         if (s.id !== sectionId) return s;
-        const newSeq = [...s.sequence, { id: `item-${Date.now()}`, chord, lyric }];
-        return {
-          ...s,
-          sequence: newSeq,
-          uniquePads: buildUniquePads(newSeq),
-        };
+        const targetLineIdx = get().activeLineIndex;
+        const lines = s.lines.map((line, lIdx) => {
+          if (lIdx !== targetLineIdx) return line;
+          return {
+            ...line,
+            chords: [...line.chords, { id: `c-${Date.now()}`, chord, lyric }],
+          };
+        });
+        return { ...s, lines };
       }),
     });
   },
@@ -263,35 +298,52 @@ export const usePadStore = create<PadState>((set, get) => ({
     set({
       sections: get().sections.map(s => {
         if (s.id !== sectionId) return s;
-        const newSeq = s.sequence.filter((_, i) => i !== idx);
-        return {
-          ...s,
-          sequence: newSeq,
-          uniquePads: buildUniquePads(newSeq),
-        };
+        const targetLineIdx = get().activeLineIndex;
+        const lines = s.lines.map((line, lIdx) => {
+          if (lIdx !== targetLineIdx) return line;
+          return {
+            ...line,
+            chords: line.chords.filter((_, cIdx) => cIdx !== idx),
+          };
+        });
+        return { ...s, lines };
       }),
-    });
-  },
-
-  addSection: () => {
-    const id = `sec-${Date.now()}`;
-    const n = get().sections.length + 1;
-    const defaultSeq = [{ id: '1', chord: 'C' }, { id: '2', chord: 'G' }, { id: '3', chord: 'Am' }, { id: '4', chord: 'F' }];
-    set({
-      sections: [...get().sections, {
-        id,
-        name: `Đoạn ${n}`,
-        sequence: defaultSeq,
-        uniquePads: buildUniquePads(defaultSeq),
-      }],
-      activeSectionId: id,
-      activeSequenceIndex: 0,
     });
   },
 
   removeSection: (id) => {
     const sections = get().sections.filter(s => s.id !== id);
-    set({ sections, activeSectionId: sections[0]?.id ?? '', activeSequenceIndex: 0 });
+    set({ sections, activeSectionId: sections[0]?.id ?? '', activeLineIndex: 0, activeChordIndex: -1 });
+  },
+
+  triggerChordInLine: (lineIdx: number, chordIdx: number) => {
+    const section = get().sections.find(s => s.id === get().activeSectionId);
+    if (!section || lineIdx < 0 || lineIdx >= section.lines.length) return;
+
+    const line = section.lines[lineIdx];
+    if (chordIdx < 0 || chordIdx >= line.chords.length) return;
+
+    const item = line.chords[chordIdx];
+    const settings = get().audioSettings;
+
+    if (get().isRecording) {
+      metronomeEngine.recordPadEvent(section.id, chordIdx);
+    }
+
+    set({
+      activeLineIndex: lineIdx,
+      activeChordIndex: chordIdx,
+    });
+
+    padEngine.triggerChordPad(item.chord, settings);
+  },
+
+  triggerLeftHandHotkey: (key: string) => {
+    const hotkeyIdx = LEFT_HAND_HOTKEYS.indexOf(key.toUpperCase());
+    if (hotkeyIdx === -1) return;
+
+    const currentLineIdx = get().activeLineIndex;
+    get().triggerChordInLine(currentLineIdx, hotkeyIdx);
   },
 
   setChordSheetText: (text) => set({ chordSheetText: text }),
@@ -303,26 +355,28 @@ export const usePadStore = create<PadState>((set, get) => ({
     const parsed = parseChordSheet(text);
     if (parsed.length === 0) return;
 
-    const sections: PadSection[] = parsed.map((s, i) => {
-      const sequence: SequenceItem[] = s.chords.map((c, j) => ({
-        id: `item-${i}-${j}-${Date.now()}`,
+    const lines: LineProgression[] = parsed.map((s, i) => ({
+      id: `line-${i}-${Date.now()}`,
+      lineName: s.name,
+      chords: s.chords.map((c, j) => ({
+        id: `c-${i}-${j}-${Date.now()}`,
         chord: c.chord,
         lyric: c.lyric,
-      }));
-      return {
-        id: `sec-parsed-${i}-${Date.now()}`,
-        name: s.name,
-        sequence,
-        uniquePads: buildUniquePads(sequence),
-      };
-    });
+      })),
+    }));
+
+    const newSection: PadSection = {
+      id: `sec-parsed-${Date.now()}`,
+      name: get().songTitle || 'Bài Hát Mới',
+      lines,
+    };
 
     padEngine.resetPreviousChord();
     set({
-      sections,
-      activeSectionId: sections[0].id,
-      activePadKey: null,
-      activeSequenceIndex: 0,
+      sections: [newSection],
+      activeSectionId: newSection.id,
+      activeLineIndex: 0,
+      activeChordIndex: -1,
     });
   },
 
@@ -341,104 +395,27 @@ export const usePadStore = create<PadState>((set, get) => ({
     }
   },
 
-  triggerPad: (sectionId: string, uniquePadIdx: number) => {
-    const section = get().sections.find(s => s.id === sectionId);
-    if (!section || uniquePadIdx < 0 || uniquePadIdx >= section.uniquePads.length) return;
-
-    const uniquePad = section.uniquePads[uniquePadIdx];
-    const settings = get().audioSettings;
-
-    if (get().isRecording) {
-      metronomeEngine.recordPadEvent(sectionId, uniquePadIdx);
-    }
-
-    // Advance sequence timeline index to next matching chord in sequence
-    const currentSeqIdx = get().activeSequenceIndex;
-    let nextSeqIdx = currentSeqIdx;
-    for (let offset = 1; offset <= section.sequence.length; offset++) {
-      const candidateIdx = (currentSeqIdx + offset) % section.sequence.length;
-      if (section.sequence[candidateIdx].chord === uniquePad.chord) {
-        nextSeqIdx = candidateIdx;
-        break;
-      }
-    }
-
-    set({
-      activePadKey: null,
-      activeSequenceIndex: nextSeqIdx,
-    });
-
-    requestAnimationFrame(() => {
-      set({ activePadKey: `${sectionId}:${uniquePadIdx}` });
-    });
-
-    padEngine.triggerChordPad(uniquePad.chord, settings);
-  },
-
-  triggerPadByHotkey: (hotkey: string) => {
-    const sectionId = get().activeSectionId;
-    const section = get().sections.find(s => s.id === sectionId);
-    if (!section) return;
-
-    const padIdx = section.uniquePads.findIndex(p => p.hotkey.toUpperCase() === hotkey.toUpperCase());
-    if (padIdx !== -1) {
-      get().triggerPad(sectionId, padIdx);
-    }
-  },
-
-  stepSequence: (direction: 'next' | 'prev') => {
-    const sectionId = get().activeSectionId;
-    const section = get().sections.find(s => s.id === sectionId);
-    if (!section || section.sequence.length === 0) return;
-
-    const currentSeqIdx = get().activeSequenceIndex;
-    const nextSeqIdx = direction === 'next'
-      ? (currentSeqIdx + 1) % section.sequence.length
-      : (currentSeqIdx <= 0 ? section.sequence.length - 1 : currentSeqIdx - 1);
-
-    const targetChord = section.sequence[nextSeqIdx].chord;
-    const uniquePadIdx = section.uniquePads.findIndex(p => p.chord === targetChord);
-
-    if (uniquePadIdx !== -1) {
-      get().triggerPad(sectionId, uniquePadIdx);
-    }
-  },
-
   loadTimEmPreset: () => {
     padEngine.resetPreviousChord();
     set({
       songTitle: 'Tìm Em',
       key: 'C',
-      sections: [
-        {
-          id: 'te-verse',
-          name: 'Verse (Phiên Khúc)',
-          sequence: DEFAULT_TIM_EM_SEQUENCE,
-          uniquePads: buildUniquePads(DEFAULT_TIM_EM_SEQUENCE),
-        },
-      ],
-      activeSectionId: 'te-verse',
-      activePadKey: null,
-      activeSequenceIndex: 0,
+      sections: [PRESET_TIM_EM_SECTION],
+      activeSectionId: 'sec-timem',
+      activeLineIndex: 0,
+      activeChordIndex: -1,
     });
   },
 
-  loadNeuNhuTaChangConPreset: () => {
+  loadVanLuonLaAnhPreset: () => {
     padEngine.resetPreviousChord();
     set({
-      songTitle: 'Nếu Như Ta Chẳng Còn (#86874)',
-      key: 'C',
-      sections: [
-        {
-          id: 'nn-verse',
-          name: 'Verse (Nếu Như Ta Chẳng Còn)',
-          sequence: DEFAULT_NEU_NHU_TA_SEQUENCE,
-          uniquePads: buildUniquePads(DEFAULT_NEU_NHU_TA_SEQUENCE),
-        },
-      ],
-      activeSectionId: 'nn-verse',
-      activePadKey: null,
-      activeSequenceIndex: 0,
+      songTitle: 'Vẫn Luôn Là Anh',
+      key: 'D',
+      sections: [PRESET_VAN_LUON_LA_ANH_SECTION],
+      activeSectionId: 'sec-vanluonlaanh',
+      activeLineIndex: 0,
+      activeChordIndex: -1,
     });
   },
 }));

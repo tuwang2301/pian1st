@@ -6,14 +6,9 @@ import { SectionPadGroup } from '../components/pad/SectionPadGroup';
 import { ChordSheetParser } from '../components/pad/ChordSheetParser';
 import { AudioControls } from '../components/audio/AudioControls';
 import { VirtualKeyboard } from '../components/piano/VirtualKeyboard';
-import { ALL_KEYS, NoteName } from '../lib/music/chords';
-import {
-  Music, Plus, Keyboard, ChevronDown, ChevronUp, SlidersHorizontal
-} from 'lucide-react';
-
 import { MetronomeBar } from '../components/metronome/MetronomeBar';
-
-const SECTION_HOTKEYS = ['Q', 'W', 'E', 'R', 'T'];
+import { ALL_KEYS, NoteName } from '../lib/music/chords';
+import { Music, Plus, Keyboard, SlidersHorizontal } from 'lucide-react';
 
 export default function Home() {
   const {
@@ -24,17 +19,17 @@ export default function Home() {
     sections,
     activeSectionId,
     setActiveSection,
-    addSection,
-    triggerPad,
+    triggerLeftHandHotkey,
+    stepLine,
     loadTimEmPreset,
-    audioSettings,
+    loadVanLuonLaAnhPreset,
   } = usePadStore();
 
   const [showAudio, setShowAudio] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [showHints, setShowHints] = useState(true);
 
-  // ── Global Keyboard Listener ───────────────────────────────────────────────
+  // ── 2-HANDED GLOBAL KEYBOARD LISTENER (ASDF + ARROW KEYS) ──────────────────
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ignore if focus is inside an input / textarea
     const tag = (e.target as HTMLElement).tagName.toLowerCase();
@@ -42,48 +37,32 @@ export default function Home() {
 
     const key = e.key.toUpperCase();
 
-    // ArrowUp / ArrowDown: Switch Section (Verse <-> Chorus <-> Bridge)
-    const currentSectionIdx = sections.findIndex(s => s.id === activeSectionId);
-    if (e.key === 'ArrowDown') {
+    // Right Hand (Arrow Keys / Space / Enter): Line Navigation
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      const nextSecIdx = (currentSectionIdx + 1) % sections.length;
-      setActiveSection(sections[nextSecIdx].id);
+      stepLine('next');
       return;
     }
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
-      const prevSecIdx = currentSectionIdx <= 0 ? sections.length - 1 : currentSectionIdx - 1;
-      setActiveSection(sections[prevSecIdx].id);
+      stepLine('prev');
       return;
     }
 
-    // Space or ArrowRight: Advance Sequence Timeline
-    if (e.key === ' ' || e.key === 'ArrowRight') {
+    // Left Hand (Home Row ASDF G H J K): Chord Trigger
+    const LEFT_HAND_KEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
+    if (LEFT_HAND_KEYS.includes(key)) {
       e.preventDefault();
-      usePadStore.getState().stepSequence('next');
+      triggerLeftHandHotkey(key);
       return;
     }
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      usePadStore.getState().stepSequence('prev');
-      return;
-    }
-
-    // Direct Ergonomic Key Trigger (QWER / ASDF / ZXCV)
-    const ERGONOMIC_KEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
-    if (ERGONOMIC_KEYS.includes(key)) {
-      e.preventDefault();
-      usePadStore.getState().triggerPadByHotkey(key);
-      return;
-    }
-  }, [sections, activeSectionId, setActiveSection]);
+  }, [triggerLeftHandHotkey, stepLine]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // ── Active section ─────────────────────────────────────────────────────────
   const activeSection = sections.find(s => s.id === activeSectionId) || sections[0];
 
   return (
@@ -98,7 +77,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="font-display font-bold text-lg text-[#F5F2EB] leading-none">Pian1st</h1>
-              <p className="text-[10px] text-gray-500 font-mono">Live Chord Pad Studio</p>
+              <p className="text-[10px] text-gray-500 font-mono">Live Piano Studio</p>
             </div>
           </div>
 
@@ -127,17 +106,17 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {/* Presets */}
             <button
-              onClick={() => usePadStore.getState().loadTimEmPreset()}
-              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
+              onClick={loadVanLuonLaAnhPreset}
+              className="px-3.5 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
             >
-              Tìm Em
+              Vẫn Luôn Là Anh (Bản Chuẩn)
             </button>
 
             <button
-              onClick={() => usePadStore.getState().loadNeuNhuTaChangConPreset()}
-              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
+              onClick={loadTimEmPreset}
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#2B2E38] text-gray-300 text-xs font-mono font-bold transition-all hover:border-gray-500"
             >
-              Nếu Như Ta Chẳng Còn (#86874)
+              Tìm Em
             </button>
 
             {/* Audio Settings toggle */}
@@ -164,14 +143,13 @@ export default function Home() {
       {/* ── Main ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
 
-        {/* Keyboard Hints Banner */}
+        {/* 2-Handed Keyboard Hints Banner */}
         {showHints && (
-          <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-wrap text-xs font-mono text-gray-400">
-              <span className="text-[#D4AF37] font-bold">Phím tắt:</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q W E R</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">A S D F</kbd> Gõ trực tiếp Pad</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Space</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">→</kbd> Tiến phách bài hát</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">↑</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">↓</kbd> Đổi đoạn</span>
+          <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-xl">
+            <div className="flex items-center gap-4 flex-wrap text-xs font-mono text-gray-400">
+              <span className="text-[#D4AF37] font-bold uppercase tracking-wider">Hướng dẫn đệm 2 tay:</span>
+              <span><span className="text-[#F5F2EB] font-bold">Tay Trái:</span> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">A</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">S</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">D</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">F</kbd> Đập Hợp Âm trong dòng</span>
+              <span><span className="text-[#F5F2EB] font-bold">Tay Phải:</span> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB] font-bold">→</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB] font-bold">↓</kbd> Chuyển Dòng / Vòng tiếp theo</span>
             </div>
             <button
               onClick={() => setShowHints(false)}
@@ -194,43 +172,14 @@ export default function Home() {
         {/* Chord Sheet Parser */}
         <ChordSheetParser />
 
-        {/* ── Section Tab Bar ──────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-1">
-          {sections.map((section, idx) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border font-mono text-sm font-bold transition-all ${
-                activeSectionId === section.id
-                  ? 'bg-[#D4AF37] text-[#0B0C10] border-[#D4AF37] shadow-brass-glow'
-                  : 'bg-[#16181E] text-gray-300 border-[#2B2E38] hover:border-[#D4AF37]/50'
-              }`}
-            >
-              <span className="text-[10px] opacity-60">{SECTION_HOTKEYS[idx] || ''}</span>
-              <span>{section.name}</span>
-              <span className="text-[10px] opacity-60">{section.uniquePads.length} Hợp Âm Độc Nhất</span>
-            </button>
-          ))}
-
-          {/* Add Section */}
-          <button
-            onClick={addSection}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dashed border-[#2B2E38] hover:border-[#D4AF37] text-gray-400 hover:text-[#D4AF37] font-mono text-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm Đoạn
-          </button>
-        </div>
-
-        {/* ── Section Pad Groups ───────────────────────────────────────────── */}
+        {/* ── Section Display ──────────────────────────────────────────────── */}
         <div className="space-y-4">
-          {sections.map((section, idx) => (
+          {sections.map((section) => (
             <SectionPadGroup
               key={section.id}
               sectionId={section.id}
               sectionName={section.name}
-              sequence={section.sequence}
-              uniquePads={section.uniquePads}
+              lines={section.lines}
               isActive={section.id === activeSectionId}
               onSelect={() => setActiveSection(section.id)}
             />

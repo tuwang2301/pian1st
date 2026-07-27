@@ -26,7 +26,8 @@ export const ChordPad: React.FC<ChordPadProps> = ({
 
   const hotkey = index < 8 ? String(index + 1) : null;
 
-  const handlePress = () => {
+  const handlePress = (e: React.PointerEvent | React.MouseEvent) => {
+    e.preventDefault();
     setIsPressed(true);
     triggerPad(sectionId, index);
     setTimeout(() => setIsPressed(false), 150);
@@ -36,7 +37,7 @@ export const ChordPad: React.FC<ChordPadProps> = ({
     <div className="relative group">
       <button
         id={`pad-${sectionId}-${index}`}
-        onClick={handlePress}
+        onPointerDown={handlePress}
         className={`
           relative w-full min-h-[90px] rounded-2xl border-2 transition-all duration-150 select-none
           flex flex-col items-center justify-center gap-1 px-3 py-4 overflow-hidden

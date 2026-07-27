@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { NoteName, transposeChord } from '../lib/music/chords';
 import { padEngine, AudioSettings, DEFAULT_AUDIO_SETTINGS } from '../lib/audio/padEngine';
+import { metronomeEngine } from '../lib/audio/metronomeEngine';
 import { parseChordSheet, ParsedSection } from '../lib/music/chordParser';
 
 export interface PadSection {
@@ -15,6 +16,13 @@ export interface PadState {
   // Song info
   songTitle: string;
   key: NoteName;
+
+  // Metronome & Loop State
+  bpm: number;
+  isMetronomeRunning: boolean;
+  activeBeat: number;
+  isRecording: boolean;
+  isLooping: boolean;
 
   // Sections / Pads
   sections: PadSection[];
@@ -33,6 +41,14 @@ export interface PadState {
   // Actions
   setKey: (key: NoteName) => void;
   setSongTitle: (title: string) => void;
+  setBpm: (bpm: number) => void;
+
+  // Metronome & Loop Controls
+  toggleMetronome: () => void;
+  startRecording: () => void;
+  stopRecordingAndLoop: () => void;
+  stopLoop: () => void;
+  clearLoop: () => void;
 
   // Section management
   setActiveSection: (id: string) => void;
@@ -72,6 +88,11 @@ const DEFAULT_SECTIONS: PadSection[] = [
 export const usePadStore = create<PadState>((set, get) => ({
   songTitle: 'Tìm Em',
   key: 'C',
+  bpm: 85,
+  isMetronomeRunning: false,
+  activeBeat: 0,
+  isRecording: false,
+  isLooping: false,
   sections: DEFAULT_SECTIONS,
   activeSectionId: 'sec-verse',
   activePadKey: null,
@@ -94,6 +115,50 @@ export const usePadStore = create<PadState>((set, get) => ({
   },
 
   setSongTitle: (title) => set({ songTitle: title }),
+
+  setBpm: (bpm: number) => {
+    set({ bpm });
+    metronomeEngine.setBpm(bpm);
+  },
+
+  toggleMetronome: () => {
+    const isRunning = metronomeEngine.toggleMetronome();
+    set({ isMetronomeRunning: isRunning });
+
+    if (isRunning) {
+      metronomeEngine.setBeatCallback((beat) => {
+        set({ activeBeat: beat });
+      });
+    } else {
+      set({ activeBeat: 0 });
+    }
+  },
+
+  startRecording: () => {
+    metronomeEngine.setTriggerPadCallback((sectionId, padIdx) => {
+      get().triggerPad(sectionId, padIdx);
+    });
+    metronomeEngine.startRecording();
+    set({ isRecording: true, isLooping: false, isMetronomeRunning: true });
+    metronomeEngine.setBeatCallback((beat) => {
+      set({ activeBeat: beat });
+    });
+  },
+
+  stopRecordingAndLoop: () => {
+    metronomeEngine.stopRecordingAndStartLoop();
+    set({ isRecording: false, isLooping: true });
+  },
+
+  stopLoop: () => {
+    metronomeEngine.stopLoopPlayback();
+    set({ isLooping: false });
+  },
+
+  clearLoop: () => {
+    metronomeEngine.clearLoop();
+    set({ isRecording: false, isLooping: false });
+  },
 
   setActiveSection: (id) => {
     set({ activeSectionId: id, activePadKey: null });
@@ -181,6 +246,11 @@ export const usePadStore = create<PadState>((set, get) => ({
 
     const chordStr = section.chords[padIdx];
     const settings = get().audioSettings;
+
+    // Record pad event if live recording is active
+    if (get().isRecording) {
+      metronomeEngine.recordPadEvent(sectionId, padIdx);
+    }
 
     // Reset pad key briefly to force UI pulse effect even when clicking the same pad repeatedly
     set({ activePadKey: null });

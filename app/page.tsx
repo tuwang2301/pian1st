@@ -11,6 +11,8 @@ import {
   Music, Plus, Keyboard, ChevronDown, ChevronUp, SlidersHorizontal
 } from 'lucide-react';
 
+import { MetronomeBar } from '../components/metronome/MetronomeBar';
+
 const SECTION_HOTKEYS = ['Q', 'W', 'E', 'R', 'T'];
 
 export default function Home() {
@@ -158,6 +160,9 @@ export default function Home() {
 
         {/* Virtual Keyboard (collapsible) */}
         {showKeyboard && <VirtualKeyboard />}
+
+        {/* Metronome & Live Loop Recorder */}
+        <MetronomeBar />
 
         {/* Chord Sheet Parser */}
         <ChordSheetParser />

@@ -1,63 +1,211 @@
 'use client';
 
-import React from 'react';
-import { Header } from '../components/header/Header';
+import React, { useEffect, useCallback, useState } from 'react';
+import { usePadStore } from '../store/usePadStore';
+import { SectionPadGroup } from '../components/pad/SectionPadGroup';
+import { ChordSheetParser } from '../components/pad/ChordSheetParser';
+import { AudioControls } from '../components/audio/AudioControls';
 import { VirtualKeyboard } from '../components/piano/VirtualKeyboard';
-import { SectionArranger } from '../components/sections/SectionArranger';
-import { PlaybackControls } from '../components/playback/PlaybackControls';
-import { useSongStore } from '../store/useSongStore';
-import { Music, Sparkles, HelpCircle, Heart, ShieldCheck } from 'lucide-react';
+import { ALL_KEYS, NoteName } from '../lib/music/chords';
+import {
+  Music, Plus, Keyboard, ChevronDown, ChevronUp, SlidersHorizontal
+} from 'lucide-react';
+
+const SECTION_HOTKEYS = ['Q', 'W', 'E', 'R', 'T'];
 
 export default function Home() {
+  const {
+    songTitle,
+    setSongTitle,
+    key: currentKey,
+    setKey,
+    sections,
+    activeSectionId,
+    setActiveSection,
+    addSection,
+    triggerPad,
+    loadTimEmPreset,
+    audioSettings,
+  } = usePadStore();
+
+  const [showAudio, setShowAudio] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [showHints, setShowHints] = useState(true);
+
+  // ── Global Keyboard Listener ───────────────────────────────────────────────
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Ignore if focus is inside an input / textarea
+    const tag = (e.target as HTMLElement).tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+    // Number keys 1–8: trigger pad in active section
+    const num = parseInt(e.key);
+    if (!isNaN(num) && num >= 1 && num <= 8) {
+      const section = sections.find(s => s.id === activeSectionId);
+      if (section && num - 1 < section.chords.length) {
+        triggerPad(activeSectionId, num - 1);
+      }
+      return;
+    }
+
+    // Q W E R T: switch sections
+    const upperKey = e.key.toUpperCase();
+    const sectionIdx = SECTION_HOTKEYS.indexOf(upperKey);
+    if (sectionIdx !== -1 && sectionIdx < sections.length) {
+      setActiveSection(sections[sectionIdx].id);
+      return;
+    }
+  }, [sections, activeSectionId, triggerPad, setActiveSection]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // ── Active section ─────────────────────────────────────────────────────────
+  const activeSection = sections.find(s => s.id === activeSectionId) || sections[0];
+
   return (
-    <main className="min-h-screen bg-[#0B0C10] flex flex-col font-sans pb-32">
-      {/* Header */}
-      <Header />
-
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-8 flex-1">
-        {/* Hero Banner / Instructions */}
-        <div className="bg-gradient-to-r from-[#16181E] via-[#1E232F] to-[#16181E] border border-[#2B2E38] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="max-w-3xl space-y-3 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Phòng Đệm Piano Tự Động</span>
+    <main className="min-h-screen bg-[#0B0C10] flex flex-col font-sans">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-[#16181E]/95 border-b border-[#2B2E38] backdrop-blur-md shadow-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#8C6D1F] flex items-center justify-center shadow-brass-glow">
+              <Music className="w-5 h-5 text-[#0B0C10] stroke-[2.5]" />
             </div>
-
-            <h2 className="font-display text-2xl sm:text-4xl font-extrabold text-[#F5F2EB] tracking-tight leading-tight">
-              Không có nhạc cụ bên cạnh? <br />
-              <span className="text-[#D4AF37]">Tự tạo backing track piano & tập hát ngay.</span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-gray-300 font-sans leading-relaxed">
-              Chọn Tone bài hát, chọn vòng hợp âm theo đoạn (Verse / Chorus), chọn kiểu đệm tự động và bấm phát nhạc. Âm thanh piano chân thực được tính toán chuẩn bán âm lý thuyết nhạc.
-            </p>
-
-            {/* Preset Demo Buttons */}
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <span className="text-xs font-mono text-gray-400">Thử ngay bài mẫu:</span>
-              <button
-                onClick={() => useSongStore.getState().loadTimEmPreset()}
-                className="px-3.5 py-1.5 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37] text-[#D4AF37] text-xs font-mono font-bold transition-all shadow-md hover:scale-105 flex items-center gap-1.5"
-              >
-                <Music className="w-3.5 h-3.5" />
-                <span>Tải bài "Tìm Em" (Hopamchuan #86897)</span>
-              </button>
+            <div>
+              <h1 className="font-display font-bold text-lg text-[#F5F2EB] leading-none">Pian1st</h1>
+              <p className="text-[10px] text-gray-500 font-mono">Live Chord Pad Studio</p>
             </div>
           </div>
+
+          {/* Title + Key */}
+          <div className="flex items-center gap-3 flex-1 max-w-sm">
+            <input
+              type="text"
+              value={songTitle}
+              onChange={e => setSongTitle(e.target.value)}
+              placeholder="Tên bài hát..."
+              className="flex-1 bg-[#0B0C10] text-[#F5F2EB] border border-[#2B2E38] focus:border-[#D4AF37] rounded-xl px-4 py-2 font-display font-bold text-sm focus:outline-none placeholder:text-gray-600 transition-all"
+            />
+            <div className="flex items-center gap-2 bg-[#0B0C10] border border-[#2B2E38] px-3 py-2 rounded-xl">
+              <span className="text-xs font-mono text-gray-400">Tone:</span>
+              <select
+                value={currentKey}
+                onChange={e => setKey(e.target.value as NoteName)}
+                className="bg-transparent text-[#D4AF37] font-mono font-bold text-sm focus:outline-none cursor-pointer"
+              >
+                {ALL_KEYS.map(k => <option key={k} value={k} className="bg-[#16181E]">{k}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Right Controls */}
+          <div className="flex items-center gap-2">
+            {/* Preset */}
+            <button
+              onClick={loadTimEmPreset}
+              className="px-3.5 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
+            >
+              🎵 Tìm Em
+            </button>
+
+            {/* Audio Settings toggle */}
+            <button
+              onClick={() => setShowAudio(v => !v)}
+              className={`p-2.5 rounded-xl border transition-all ${showAudio ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37]' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
+              title="Điều chỉnh âm thanh"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+
+            {/* Virtual keyboard toggle */}
+            <button
+              onClick={() => setShowKeyboard(v => !v)}
+              className={`p-2.5 rounded-xl border transition-all ${showKeyboard ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37]' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
+              title="Hiển thị bàn phím ảo"
+            >
+              <Keyboard className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Main ───────────────────────────────────────────────────────────── */}
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+
+        {/* Keyboard Hints Banner */}
+        {showHints && (
+          <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-wrap text-xs font-mono text-gray-400">
+              <span className="text-[#D4AF37] font-bold">⌨️ Phím tắt:</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">1</kbd>–<kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">8</kbd> Bấm hợp âm trong đoạn đang chọn</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">W</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">E</kbd> Đổi đoạn (Verse / Chorus / Bridge)</span>
+            </div>
+            <button
+              onClick={() => setShowHints(false)}
+              className="text-gray-500 hover:text-gray-300 transition-colors ml-3 flex-shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Audio Controls (collapsible) */}
+        {showAudio && <AudioControls />}
+
+        {/* Virtual Keyboard (collapsible) */}
+        {showKeyboard && <VirtualKeyboard />}
+
+        {/* Chord Sheet Parser */}
+        <ChordSheetParser />
+
+        {/* ── Section Tab Bar ──────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 overflow-x-auto pb-1">
+          {sections.map((section, idx) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border font-mono text-sm font-bold transition-all ${
+                activeSectionId === section.id
+                  ? 'bg-[#D4AF37] text-[#0B0C10] border-[#D4AF37] shadow-brass-glow'
+                  : 'bg-[#16181E] text-gray-300 border-[#2B2E38] hover:border-[#D4AF37]/50'
+              }`}
+            >
+              <span className="text-[10px] opacity-60">{SECTION_HOTKEYS[idx] || ''}</span>
+              <span>{section.name}</span>
+              <span className="text-[10px] opacity-60">{section.chords.length} hợp âm</span>
+            </button>
+          ))}
+
+          {/* Add Section */}
+          <button
+            onClick={addSection}
+            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dashed border-[#2B2E38] hover:border-[#D4AF37] text-gray-400 hover:text-[#D4AF37] font-mono text-sm transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Thêm Đoạn
+          </button>
         </div>
 
-        {/* Interactive Virtual Piano Visualizer */}
-        <VirtualKeyboard />
+        {/* ── Section Pad Groups ───────────────────────────────────────────── */}
+        <div className="space-y-4">
+          {sections.map((section, idx) => (
+            <SectionPadGroup
+              key={section.id}
+              sectionId={section.id}
+              sectionName={section.name}
+              chords={section.chords}
+              isActive={section.id === activeSectionId}
+              hotkey={SECTION_HOTKEYS[idx] || ''}
+              onSelect={() => setActiveSection(section.id)}
+            />
+          ))}
+        </div>
 
-        {/* Section Arranger Workbench */}
-        <SectionArranger />
       </div>
-
-      {/* Floating Playback Controls Bar */}
-      <PlaybackControls />
     </main>
   );
 }

@@ -23,6 +23,7 @@ export default function Home() {
     stepLine,
     loadTimEmPreset,
     loadVanLuonLaAnhPreset,
+    loadKhongBietGiPreset,
   } = usePadStore();
 
   const [showAudio, setShowAudio] = useState(false);
@@ -107,9 +108,16 @@ export default function Home() {
             {/* Presets */}
             <button
               onClick={loadVanLuonLaAnhPreset}
-              className="px-3.5 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
             >
-              Vẫn Luôn Là Anh (Bản Chuẩn)
+              Vẫn Luôn Là Anh
+            </button>
+
+            <button
+              onClick={loadKhongBietGiPreset}
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
+            >
+              Không Biết Gì (Jazz Pop)
             </button>
 
             <button

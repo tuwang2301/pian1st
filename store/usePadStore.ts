@@ -85,9 +85,10 @@ export interface PadState {
   // Presets
   loadTimEmPreset: () => void;
   loadVanLuonLaAnhPreset: () => void;
+  loadKhongBietGiPreset: () => void;
 }
 
-// Preset data for "Vẫn Luôn Là Anh / Nếu Mai Sau"
+// Preset data for "Vẫn Luôn Là Anh"
 const PRESET_VAN_LUON_LA_ANH_SECTION: PadSection = {
   id: 'sec-vanluonlaanh',
   name: 'Bài Hát: Vẫn Luôn Là Anh',
@@ -126,6 +127,51 @@ const PRESET_VAN_LUON_LA_ANH_SECTION: PadSection = {
         { id: '16', chord: 'Gm', lyric: 'Hãy nói với' },
         { id: '17', chord: 'A', lyric: 'anh ở bên' },
         { id: '18', chord: 'Dm', lyric: 'nhau...' },
+      ],
+    },
+  ],
+};
+
+// Preset data for "Không Biết Gì"
+const PRESET_KHONG_BIET_GI_SECTION: PadSection = {
+  id: 'sec-khongbietgi',
+  name: 'Bài Hát: Không Biết Gì',
+  lines: [
+    {
+      id: 'k-l1',
+      lineName: 'Verse (Vòng 1)',
+      chords: [
+        { id: 'k1', chord: 'Gmaj7', lyric: 'Giờ này em nói' },
+        { id: 'k2', chord: 'Em', lyric: 'cái chi' },
+        { id: 'k3', chord: 'B', lyric: 'cũng đồng ý' },
+        { id: 'k4', chord: 'Gmaj7', lyric: 'Kể cả không nghe' },
+        { id: 'k5', chord: 'Em', lyric: 'thấy chi' },
+        { id: 'k6', chord: 'Dm7', lyric: 'cũng đều' },
+        { id: 'k7', chord: 'G7', lyric: 'đồng ý' },
+      ],
+    },
+    {
+      id: 'k-l2',
+      lineName: 'Verse (Vòng 2 - II-V-I Jazz)',
+      chords: [
+        { id: 'k8', chord: 'C', lyric: 'Mỗi khi' },
+        { id: 'k9', chord: 'D', lyric: 'anh bên em' },
+        { id: 'k10', chord: 'Bm7', lyric: 'chẳng cần biết' },
+        { id: 'k11', chord: 'E7', lyric: 'mình biết cái gì' },
+        { id: 'k12', chord: 'Am7', lyric: 'Mất bao lâu' },
+        { id: 'k13', chord: 'D7', lyric: 'để biết chi' },
+      ],
+    },
+    {
+      id: 'k-l3',
+      lineName: 'Chorus (Vòng Cao Trào)',
+      chords: [
+        { id: 'k14', chord: 'Cmaj7', lyric: 'Nhưng trái tim' },
+        { id: 'k15', chord: 'Bm7', lyric: 'choán lý trí' },
+        { id: 'k16', chord: 'E7', lyric: 'mỗi thứ đều' },
+        { id: 'k17', chord: 'Am7', lyric: 'quên một tí' },
+        { id: 'k18', chord: 'D7', lyric: 'chẳng giải quyết' },
+        { id: 'k19', chord: 'Gmaj7', lyric: 'được gì' },
       ],
     },
   ],
@@ -355,26 +401,24 @@ export const usePadStore = create<PadState>((set, get) => ({
     const parsed = parseChordSheet(text);
     if (parsed.length === 0) return;
 
-    const lines: LineProgression[] = parsed.map((s, i) => ({
-      id: `line-${i}-${Date.now()}`,
-      lineName: s.name,
-      chords: s.chords.map((c, j) => ({
-        id: `c-${i}-${j}-${Date.now()}`,
-        chord: c.chord,
-        lyric: c.lyric,
+    const sections: PadSection[] = parsed.map((s, i) => ({
+      id: `sec-parsed-${i}-${Date.now()}`,
+      name: s.name,
+      lines: s.lines.map(l => ({
+        id: l.id,
+        lineName: l.lineName,
+        chords: l.chords.map((c, j) => ({
+          id: `c-${i}-${j}-${Date.now()}`,
+          chord: c.chord,
+          lyric: c.lyric,
+        })),
       })),
     }));
 
-    const newSection: PadSection = {
-      id: `sec-parsed-${Date.now()}`,
-      name: get().songTitle || 'Bài Hát Mới',
-      lines,
-    };
-
     padEngine.resetPreviousChord();
     set({
-      sections: [newSection],
-      activeSectionId: newSection.id,
+      sections,
+      activeSectionId: sections[0].id,
       activeLineIndex: 0,
       activeChordIndex: -1,
     });
@@ -414,6 +458,18 @@ export const usePadStore = create<PadState>((set, get) => ({
       key: 'D',
       sections: [PRESET_VAN_LUON_LA_ANH_SECTION],
       activeSectionId: 'sec-vanluonlaanh',
+      activeLineIndex: 0,
+      activeChordIndex: -1,
+    });
+  },
+
+  loadKhongBietGiPreset: () => {
+    padEngine.resetPreviousChord();
+    set({
+      songTitle: 'Không Biết Gì',
+      key: 'G',
+      sections: [PRESET_KHONG_BIET_GI_SECTION],
+      activeSectionId: 'sec-khongbietgi',
       activeLineIndex: 0,
       activeChordIndex: -1,
     });

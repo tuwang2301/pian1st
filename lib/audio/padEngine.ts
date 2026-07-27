@@ -11,6 +11,7 @@ export interface AudioSettings {
   velocity: 'soft' | 'medium' | 'strong';
   sustain: number;          // 0.5–5.0 seconds
   masterVolume: number;     // 0.0–1.0
+  playingStyle: 'arpeggio' | 'pop' | 'bassFirst' | 'block';
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -20,6 +21,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   velocity: 'medium',
   sustain: 2.5,
   masterVolume: 0.9,
+  playingStyle: 'arpeggio',
 };
 
 // Piano Type → Soundfont preset name
@@ -232,22 +234,41 @@ class ChordPadEngine {
     const velocityGain = { soft: 0.6, medium: 0.88, strong: 1.05 }[settings.velocity];
     const now = ctx.currentTime; // Immediate attack (0ms offset)
 
-    // Re-strike speed: Faster roll (12ms) if tapping same chord, 22ms for new chord
-    const bassStagger = isSameChord ? 0.012 : 0.02;
-    const trebleRollSpread = isSameChord ? 0.015 : 0.025;
+    const style = settings.playingStyle || 'arpeggio';
 
-    // 1. Play Bass notes (Left Hand - Root + 5th Quinta)
-    voicing.bassMidi.forEach((midi, i) => {
-      const delay = i * bassStagger;
-      this.playNote(midi, now + delay, settings.sustain * 1.1, velocityGain * 0.95, settings.pianoType);
-    });
-
-    // 2. Play Treble notes (Right Hand - Voice Led)
-    const bassTotalDuration = voicing.bassMidi.length * bassStagger;
-    ledTreble.forEach((midi, i) => {
-      const delay = bassTotalDuration + (i * trebleRollSpread);
-      this.playNote(midi, now + delay, settings.sustain, velocityGain * (1.0 - i * 0.03), settings.pianoType);
-    });
+    if (style === 'block') {
+      // Block Chord: All notes hit simultaneously
+      [...voicing.bassMidi, ...ledTreble].forEach(midi => {
+        this.playNote(midi, now, settings.sustain, velocityGain, settings.pianoType);
+      });
+    } else if (style === 'pop') {
+      // Pop / R&B Syncopation: Bass hits on phách 1, Treble chord syncopates 65ms after
+      voicing.bassMidi.forEach((midi, i) => {
+        this.playNote(midi, now + i * 0.012, settings.sustain * 1.1, velocityGain * 1.05, settings.pianoType);
+      });
+      ledTreble.forEach((midi, i) => {
+        this.playNote(midi, now + 0.065 + i * 0.01, settings.sustain, velocityGain * 0.95, settings.pianoType);
+      });
+    } else if (style === 'bassFirst') {
+      // Bass-First Split: Bass Quinta pair warm offset 45ms before Treble
+      voicing.bassMidi.forEach((midi, i) => {
+        this.playNote(midi, now + i * 0.015, settings.sustain * 1.1, velocityGain, settings.pianoType);
+      });
+      ledTreble.forEach((midi, i) => {
+        this.playNote(midi, now + 0.045 + i * 0.018, settings.sustain, velocityGain * 0.92, settings.pianoType);
+      });
+    } else {
+      // Ballad Arpeggio Fingerpicking Roll: Bass -> Root -> 5th -> 3rd -> 7th with smooth 38ms-45ms roll spread
+      const rollSpread = isSameChord ? 0.025 : 0.042;
+      voicing.bassMidi.forEach((midi, i) => {
+        this.playNote(midi, now + i * 0.02, settings.sustain * 1.1, velocityGain * 0.96, settings.pianoType);
+      });
+      const bassDelay = voicing.bassMidi.length * 0.02;
+      ledTreble.forEach((midi, i) => {
+        const delay = bassDelay + (i * rollSpread);
+        this.playNote(midi, now + delay, settings.sustain, velocityGain * (1.0 - i * 0.03), settings.pianoType);
+      });
+    }
 
     // Async preload missing notes
     [...voicing.bassMidi, ...ledTreble].forEach(midi => {

@@ -15,6 +15,7 @@ export interface SectionItem {
   id: string;
   name: string;
   patternId: string;
+  repeatCount?: number; // Default 1
   chords: ChordItem[];
 }
 
@@ -41,8 +42,10 @@ export interface SongState {
   // Section Management
   addSection: (name?: string) => void;
   removeSection: (sectionId: string) => void;
+  duplicateSection: (sectionId: string) => void;
   updateSectionPattern: (sectionId: string, patternId: string) => void;
   updateSectionName: (sectionId: string, name: string) => void;
+  updateSectionRepeatCount: (sectionId: string, count: number) => void;
 
   // Chord Management
   addChordToSection: (sectionId: string, chord: string, beats?: number) => void;
@@ -149,6 +152,34 @@ export const useSongStore = create<SongState>((set, get) => ({
     set({ sections });
   },
 
+  duplicateSection: (sectionId: string) => {
+    const sections = get().sections;
+    const targetIdx = sections.findIndex(s => s.id === sectionId);
+    if (targetIdx === -1) return;
+
+    const source = sections[targetIdx];
+    const newSection: SectionItem = {
+      id: `sec-${Date.now()}`,
+      name: `${source.name} (Bản sao)`,
+      patternId: source.patternId,
+      repeatCount: source.repeatCount || 1,
+      chords: source.chords.map(c => ({
+        id: `c-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        chord: c.chord,
+        beats: c.beats,
+      })),
+    };
+
+    const newSections = [...sections];
+    newSections.splice(targetIdx + 1, 0, newSection);
+    set({ sections: newSections });
+  },
+
+  updateSectionRepeatCount: (sectionId: string, count: number) => {
+    const sections = get().sections.map(s => (s.id === sectionId ? { ...s, repeatCount: Math.max(1, count) } : s));
+    set({ sections });
+  },
+
   updateSectionPattern: (sectionId: string, patternId: string) => {
     const sections = get().sections.map(s => (s.id === sectionId ? { ...s, patternId } : s));
     set({ sections });
@@ -210,6 +241,7 @@ export const useSongStore = create<SongState>((set, get) => ({
           id: 'sec-verse-timem',
           name: 'Verse (Phiên Khúc)',
           patternId: 'arpeggio-44',
+          repeatCount: 2,
           chords: [
             { id: 'te-1', chord: 'C', beats: 4 },
             { id: 'te-2', chord: 'G/B', beats: 4 },
@@ -225,6 +257,7 @@ export const useSongStore = create<SongState>((set, get) => ({
           id: 'sec-chorus-timem',
           name: 'Chorus (Điệp Khúc)',
           patternId: 'block-44',
+          repeatCount: 2,
           chords: [
             { id: 'te-9', chord: 'C', beats: 4 },
             { id: 'te-10', chord: 'G', beats: 4 },

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useSongStore, SectionItem, ChordItem } from '../../store/useSongStore';
 import { PATTERN_LIBRARY, getPatternsByTimeSignature, getPatternById } from '../../lib/audio/patterns';
 import { ChordSelectorModal } from '../chords/ChordSelectorModal';
-import { Plus, Trash2, Edit3, Music, Layers, Play, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Edit3, Music, Layers, Play, Sparkles, Copy, Repeat } from 'lucide-react';
 
 export const SectionArranger: React.FC = () => {
   const {
@@ -16,8 +16,10 @@ export const SectionArranger: React.FC = () => {
     activeBeatIdx,
     addSection,
     removeSection,
+    duplicateSection,
     updateSectionPattern,
     updateSectionName,
+    updateSectionRepeatCount,
     addChordToSection,
     removeChordFromSection,
     updateChord,
@@ -112,28 +114,56 @@ export const SectionArranger: React.FC = () => {
                   )}
                 </div>
 
-                {/* Accompaniment Pattern Selector */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-gray-400">Kiểu Đệm:</span>
-                  <select
-                    value={section.patternId}
-                    onChange={(e) => updateSectionPattern(section.id, e.target.value)}
-                    className="bg-[#0B0C10] text-[#D4AF37] font-mono text-xs px-3 py-1.5 rounded-lg border border-[#2B2E38] focus:border-[#D4AF37] focus:outline-none cursor-pointer hover:bg-[#21242E] transition-all"
+                {/* Accompaniment Pattern & Repeat Controls */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {/* Repeat Count Selector */}
+                  <div className="flex items-center gap-1.5 bg-[#0B0C10] px-2.5 py-1 rounded-lg border border-[#2B2E38]">
+                    <Repeat className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <select
+                      value={section.repeatCount || 1}
+                      onChange={(e) => updateSectionRepeatCount(section.id, Number(e.target.value))}
+                      className="bg-transparent text-[#F5F2EB] font-mono text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value={1} className="bg-[#16181E]">Lặp 1 lần (1x)</option>
+                      <option value={2} className="bg-[#16181E]">Lặp 2 lần (2x)</option>
+                      <option value={3} className="bg-[#16181E]">Lặp 3 lần (3x)</option>
+                      <option value={4} className="bg-[#16181E]">Lặp 4 lần (4x)</option>
+                    </select>
+                  </div>
+
+                  {/* Kiểu Đệm Selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-mono text-gray-400 hidden sm:inline">Kiểu:</span>
+                    <select
+                      value={section.patternId}
+                      onChange={(e) => updateSectionPattern(section.id, e.target.value)}
+                      className="bg-[#0B0C10] text-[#D4AF37] font-mono text-xs px-3 py-1.5 rounded-lg border border-[#2B2E38] focus:border-[#D4AF37] focus:outline-none cursor-pointer hover:bg-[#21242E] transition-all"
+                    >
+                      {availablePatterns.length > 0 ? (
+                        availablePatterns.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))
+                      ) : (
+                        PATTERN_LIBRARY.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.timeSignature})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Duplicate Section Button */}
+                  <button
+                    onClick={() => duplicateSection(section.id)}
+                    className="p-1.5 text-gray-400 hover:text-[#D4AF37] hover:bg-[#21242E] rounded-lg transition-all border border-[#2B2E38] flex items-center gap-1 px-2.5 text-xs font-mono"
+                    title="Sao chép đoạn này (Bản sao giữ nguyên hợp âm)"
                   >
-                    {availablePatterns.length > 0 ? (
-                      availablePatterns.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))
-                    ) : (
-                      PATTERN_LIBRARY.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.timeSignature})
-                        </option>
-                      ))
-                    )}
-                  </select>
+                    <Copy className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <span className="hidden md:inline">Sao chép</span>
+                  </button>
 
                   {/* Remove Section Button */}
                   {sections.length > 1 && (

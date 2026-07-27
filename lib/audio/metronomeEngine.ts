@@ -143,11 +143,6 @@ class MetronomeEngine {
       this.recordedEvents = [];
       this.isRecording = true;
       this.recordStartTime = performance.now();
-
-      // Ensure metronome is running for rhythm sync
-      if (!this.isMetronomeRunning) {
-        this.startMetronome();
-      }
     });
   }
 

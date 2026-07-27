@@ -1,15 +1,20 @@
-// Zustand store for Pian1st — Chord Pad Live Play Mode
+// Zustand store for Pian1st — Chord Pad Live Play Mode with Lyrics Support
 
 import { create } from 'zustand';
 import { NoteName, transposeChord } from '../lib/music/chords';
 import { padEngine, AudioSettings, DEFAULT_AUDIO_SETTINGS } from '../lib/audio/padEngine';
 import { metronomeEngine } from '../lib/audio/metronomeEngine';
-import { parseChordSheet, ParsedSection } from '../lib/music/chordParser';
+import { parseChordSheet, ChordLyricPair } from '../lib/music/chordParser';
+
+export interface PadItem {
+  chord: string;
+  lyric?: string;
+}
 
 export interface PadSection {
   id: string;
   name: string;
-  chords: string[]; // max 8
+  chords: PadItem[];
 }
 
 export interface PadState {
@@ -53,7 +58,7 @@ export interface PadState {
   // Section management
   setActiveSection: (id: string) => void;
   updateSectionName: (id: string, name: string) => void;
-  addChordToSection: (sectionId: string, chord: string) => void;
+  addChordToSection: (sectionId: string, chord: string, lyric?: string) => void;
   removeChordFromSection: (sectionId: string, idx: number) => void;
   addSection: () => void;
   removeSection: (id: string) => void;
@@ -70,18 +75,37 @@ export interface PadState {
 
   // Presets
   loadTimEmPreset: () => void;
+  loadNeuNhuTaChangConPreset: () => void;
 }
 
 const DEFAULT_SECTIONS: PadSection[] = [
   {
     id: 'sec-verse',
     name: 'Verse (Phiên Khúc)',
-    chords: ['C', 'G/B', 'Am', 'Em/G', 'F', 'C/E', 'Dm7', 'G7'],
+    chords: [
+      { chord: 'C', lyric: 'Nếu như ta' },
+      { chord: 'G/B', lyric: 'chẳng còn' },
+      { chord: 'Am', lyric: 'gặp lại nhau' },
+      { chord: 'Em/G', lyric: 'sau vỡ tan' },
+      { chord: 'F', lyric: 'Liệu anh có' },
+      { chord: 'C/E', lyric: 'tiếc nuối' },
+      { chord: 'Dm7', lyric: 'những dở dang' },
+      { chord: 'G7', lyric: 'ngày qua...' },
+    ],
   },
   {
     id: 'sec-chorus',
     name: 'Chorus (Điệp Khúc)',
-    chords: ['C', 'G', 'Am', 'Em', 'F', 'C', 'Dm7', 'G7'],
+    chords: [
+      { chord: 'C', lyric: 'Nếu như ta' },
+      { chord: 'G', lyric: 'chẳng còn bên nhau' },
+      { chord: 'Am', lyric: 'xin hãy giữ' },
+      { chord: 'Em', lyric: 'những kỷ niệm' },
+      { chord: 'F', lyric: 'Đừng làm đau' },
+      { chord: 'C', lyric: 'nhau thêm nữa' },
+      { chord: 'Dm7', lyric: 'ngày sau...' },
+      { chord: 'G7', lyric: '...' },
+    ],
   },
 ];
 
@@ -109,7 +133,10 @@ export const usePadStore = create<PadState>((set, get) => ({
 
     const sections = get().sections.map(s => ({
       ...s,
-      chords: s.chords.map(c => transposeChord(c, diff)),
+      chords: s.chords.map(item => ({
+        ...item,
+        chord: transposeChord(item.chord, diff),
+      })),
     }));
     set({ key, sections });
   },
@@ -139,7 +166,7 @@ export const usePadStore = create<PadState>((set, get) => ({
       get().triggerPad(sectionId, padIdx);
     });
     metronomeEngine.startRecording();
-    set({ isRecording: true, isLooping: false, isMetronomeRunning: true });
+    set({ isRecording: true, isLooping: false });
     metronomeEngine.setBeatCallback((beat) => {
       set({ activeBeat: beat });
     });
@@ -169,11 +196,11 @@ export const usePadStore = create<PadState>((set, get) => ({
     set({ sections: get().sections.map(s => s.id === id ? { ...s, name } : s) });
   },
 
-  addChordToSection: (sectionId, chord) => {
+  addChordToSection: (sectionId, chord, lyric) => {
     set({
       sections: get().sections.map(s => {
-        if (s.id !== sectionId || s.chords.length >= 8) return s;
-        return { ...s, chords: [...s.chords, chord] };
+        if (s.id !== sectionId) return s;
+        return { ...s, chords: [...s.chords, { chord, lyric }] };
       }),
     });
   },
@@ -191,7 +218,7 @@ export const usePadStore = create<PadState>((set, get) => ({
     const id = `sec-${Date.now()}`;
     const n = get().sections.length + 1;
     set({
-      sections: [...get().sections, { id, name: `Đoạn ${n}`, chords: ['C', 'G', 'Am', 'F'] }],
+      sections: [...get().sections, { id, name: `Đoạn ${n}`, chords: [{ chord: 'C' }, { chord: 'G' }, { chord: 'Am' }, { chord: 'F' }] }],
       activeSectionId: id,
     });
   },
@@ -213,7 +240,7 @@ export const usePadStore = create<PadState>((set, get) => ({
     const sections: PadSection[] = parsed.map((s, i) => ({
       id: `sec-parsed-${i}-${Date.now()}`,
       name: s.name,
-      chords: s.chords,
+      chords: s.chords.map(c => ({ chord: c.chord, lyric: c.lyric })),
     }));
 
     padEngine.resetPreviousChord();
@@ -228,7 +255,6 @@ export const usePadStore = create<PadState>((set, get) => ({
     const merged = { ...get().audioSettings, ...partial };
     set({ audioSettings: merged });
 
-    // Apply live audio changes
     if (partial.reverb !== undefined) padEngine.updateReverb(partial.reverb);
     if (partial.masterVolume !== undefined) padEngine.updateMasterVolume(partial.masterVolume);
     if (partial.pianoType !== undefined) {
@@ -244,21 +270,19 @@ export const usePadStore = create<PadState>((set, get) => ({
     const section = get().sections.find(s => s.id === sectionId);
     if (!section || padIdx < 0 || padIdx >= section.chords.length) return;
 
-    const chordStr = section.chords[padIdx];
+    const item = section.chords[padIdx];
     const settings = get().audioSettings;
 
-    // Record pad event if live recording is active
     if (get().isRecording) {
       metronomeEngine.recordPadEvent(sectionId, padIdx);
     }
 
-    // Reset pad key briefly to force UI pulse effect even when clicking the same pad repeatedly
     set({ activePadKey: null });
     requestAnimationFrame(() => {
       set({ activePadKey: `${sectionId}:${padIdx}` });
     });
 
-    padEngine.triggerChordPad(chordStr, settings);
+    padEngine.triggerChordPad(item.chord, settings);
   },
 
   loadTimEmPreset: () => {
@@ -267,10 +291,86 @@ export const usePadStore = create<PadState>((set, get) => ({
       songTitle: 'Tìm Em',
       key: 'C',
       sections: [
-        { id: 'te-verse', name: 'Verse (Phiên Khúc)', chords: ['C', 'G/B', 'Am', 'Em/G', 'F', 'C/E', 'Dm7', 'G7'] },
-        { id: 'te-chorus', name: 'Chorus (Điệp Khúc)', chords: ['C', 'G', 'Am', 'Em', 'F', 'C', 'Dm7', 'G7'] },
+        {
+          id: 'te-verse',
+          name: 'Verse (Phiên Khúc)',
+          chords: [
+            { chord: 'C', lyric: 'Tìm em giữa' },
+            { chord: 'G/B', lyric: 'đêm dài' },
+            { chord: 'Am', lyric: 'côi cút' },
+            { chord: 'Em/G', lyric: 'bóng hình' },
+            { chord: 'F', lyric: 'Dù biết em' },
+            { chord: 'C/E', lyric: 'xa rồi' },
+            { chord: 'Dm7', lyric: 'mãi mãi' },
+            { chord: 'G7', lyric: 'không về...' },
+          ],
+        },
+        {
+          id: 'te-chorus',
+          name: 'Chorus (Điệp Khúc)',
+          chords: [
+            { chord: 'C', lyric: 'Tìm em ở đâu' },
+            { chord: 'G', lyric: 'trong ký ức' },
+            { chord: 'Am', lyric: 'ngàn nỗi nhớ' },
+            { chord: 'Em', lyric: 'đong đầy' },
+            { chord: 'F', lyric: 'Đành buông tay' },
+            { chord: 'C', lyric: 'nhau người ơi' },
+            { chord: 'Dm7', lyric: 'từ đây...' },
+            { chord: 'G7', lyric: '...' },
+          ],
+        },
       ],
       activeSectionId: 'te-verse',
+      activePadKey: null,
+    });
+  },
+
+  loadNeuNhuTaChangConPreset: () => {
+    padEngine.resetPreviousChord();
+    set({
+      songTitle: 'Nếu Như Ta Chẳng Còn (Hopamchuan #86874)',
+      key: 'C',
+      sections: [
+        {
+          id: 'nn-verse',
+          name: 'Verse (Nếu Như Ta Chẳng Còn)',
+          chords: [
+            { chord: 'C', lyric: 'Nếu như ta' },
+            { chord: 'E7/G#', lyric: 'chẳng còn' },
+            { chord: 'Am', lyric: 'gặp lại nhau' },
+            { chord: 'C/G', lyric: 'sau vỡ tan' },
+            { chord: 'F', lyric: 'Liệu anh có' },
+            { chord: 'C/E', lyric: 'tiếc nuối' },
+            { chord: 'Dm7', lyric: 'những dở dang' },
+            { chord: 'G7', lyric: 'ngày qua...' },
+          ],
+        },
+        {
+          id: 'nn-prechorus',
+          name: 'Pre-Chorus',
+          chords: [
+            { chord: 'Am', lyric: 'Dù cho thời gian' },
+            { chord: 'Em', lyric: 'có xóa đi' },
+            { chord: 'F', lyric: 'tất cả' },
+            { chord: 'G7', lyric: 'bóng hình...' },
+          ],
+        },
+        {
+          id: 'nn-chorus',
+          name: 'Chorus (Điệp Khúc)',
+          chords: [
+            { chord: 'C', lyric: 'Nếu như ta' },
+            { chord: 'G/B', lyric: 'chẳng còn bên nhau' },
+            { chord: 'Am', lyric: 'xin hãy giữ' },
+            { chord: 'Em', lyric: 'những kỷ niệm' },
+            { chord: 'F', lyric: 'Đừng làm đau' },
+            { chord: 'C/E', lyric: 'nhau thêm nữa' },
+            { chord: 'Dm7', lyric: 'ngày sau...' },
+            { chord: 'G7', lyric: '...' },
+          ],
+        },
+      ],
+      activeSectionId: 'nn-verse',
       activePadKey: null,
     });
   },

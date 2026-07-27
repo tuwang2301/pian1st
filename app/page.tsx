@@ -106,12 +106,19 @@ export default function Home() {
 
           {/* Right Controls */}
           <div className="flex items-center gap-2">
-            {/* Preset */}
+            {/* Presets */}
             <button
-              onClick={loadTimEmPreset}
-              className="px-3.5 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
+              onClick={() => usePadStore.getState().loadTimEmPreset()}
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
             >
               🎵 Tìm Em
+            </button>
+
+            <button
+              onClick={() => usePadStore.getState().loadNeuNhuTaChangConPreset()}
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
+            >
+              🎵 Nếu Như Ta Chẳng Còn (#86874)
             </button>
 
             {/* Audio Settings toggle */}

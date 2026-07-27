@@ -7,6 +7,7 @@ import { Trash2, Plus } from 'lucide-react';
 
 interface ChordPadProps {
   chordStr: string;
+  lyric?: string;
   index: number;
   sectionId: string;
   isActive: boolean;
@@ -15,6 +16,7 @@ interface ChordPadProps {
 
 export const ChordPad: React.FC<ChordPadProps> = ({
   chordStr,
+  lyric,
   index,
   sectionId,
   isActive,
@@ -39,8 +41,8 @@ export const ChordPad: React.FC<ChordPadProps> = ({
         id={`pad-${sectionId}-${index}`}
         onPointerDown={handlePress}
         className={`
-          relative w-full min-h-[90px] rounded-2xl border-2 transition-all duration-150 select-none
-          flex flex-col items-center justify-center gap-1 px-3 py-4 overflow-hidden
+          relative w-full min-h-[96px] rounded-2xl border-2 transition-all duration-150 select-none
+          flex flex-col items-center justify-between px-3 py-3 overflow-hidden
           ${isActive
             ? 'bg-[#D4AF37] border-[#F3E197] scale-[0.97] shadow-brass-glow-lg text-[#0B0C10]'
             : isPressed
@@ -54,17 +56,27 @@ export const ChordPad: React.FC<ChordPadProps> = ({
           <div className="absolute inset-0 bg-gradient-to-b from-[#F3E197]/30 to-transparent rounded-2xl pointer-events-none" />
         )}
 
-        {/* Hotkey badge */}
-        {hotkey && (
-          <span className={`absolute top-2 left-2.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
-            isActive ? 'bg-[#0B0C10]/20 text-[#0B0C10]' : 'bg-[#2B2E38] text-[#D4AF37]'
-          }`}>
-            {hotkey}
-          </span>
-        )}
+        {/* Top Row: Hotkey badge & Lyric snippet */}
+        <div className="w-full flex items-center justify-between gap-1 z-10">
+          {hotkey ? (
+            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+              isActive ? 'bg-[#0B0C10]/20 text-[#0B0C10]' : 'bg-[#2B2E38] text-[#D4AF37]'
+            }`}>
+              {hotkey}
+            </span>
+          ) : <span />}
 
-        {/* Chord Name */}
-        <div className="flex items-baseline gap-0.5 mt-2">
+          {lyric && (
+            <span className={`text-[10px] font-sans font-medium truncate max-w-[80%] ${
+              isActive ? 'text-[#0B0C10] font-bold' : 'text-gray-600'
+            }`} title={lyric}>
+              {lyric}
+            </span>
+          )}
+        </div>
+
+        {/* Center: Chord Name */}
+        <div className="flex items-baseline gap-0.5 my-1 z-10">
           <span className={`font-display font-black tracking-tight ${
             isActive ? 'text-[#0B0C10] text-3xl' : 'text-[#121316] text-2xl'
           }`}>
@@ -82,8 +94,8 @@ export const ChordPad: React.FC<ChordPadProps> = ({
           )}
         </div>
 
-        {/* Piano type indicator dots (octave accent) */}
-        <div className="flex gap-0.5">
+        {/* Bottom indicator dots */}
+        <div className="flex gap-0.5 z-10">
           {[0, 1, 2].map(d => (
             <div key={d} className={`w-1 h-1 rounded-full ${
               isActive ? 'bg-[#0B0C10]/40' : 'bg-[#2B2E38]'

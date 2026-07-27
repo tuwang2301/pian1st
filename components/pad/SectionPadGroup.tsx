@@ -6,10 +6,12 @@ import { ChordPad } from './ChordPad';
 import { ChordSelectorModal } from '../chords/ChordSelectorModal';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 
+import { PadItem } from '../../store/usePadStore';
+
 interface SectionPadGroupProps {
   sectionId: string;
   sectionName: string;
-  chords: string[];
+  chords: PadItem[];
   isActive: boolean;
   hotkey: string;
   onSelect: () => void;
@@ -128,12 +130,13 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
       {/* Pad Grid */}
       <div className={`p-4 ${!isActive ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
-          {chords.map((chord, idx) => {
+          {chords.map((item, idx) => {
             const padKey = `${sectionId}:${idx}`;
             return (
               <ChordPad
-                key={`${chord}-${idx}`}
-                chordStr={chord}
+                key={`${item.chord}-${idx}`}
+                chordStr={item.chord}
+                lyric={item.lyric}
                 index={idx}
                 sectionId={sectionId}
                 isActive={activePadKey === padKey}

@@ -40,8 +40,7 @@ export default function Home() {
     const tag = (e.target as HTMLElement).tagName.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
-    const section = sections.find(s => s.id === activeSectionId);
-    if (!section || section.chords.length === 0) return;
+    const key = e.key.toUpperCase();
 
     // ArrowUp / ArrowDown: Switch Section (Verse <-> Chorus <-> Bridge)
     const currentSectionIdx = sections.findIndex(s => s.id === activeSectionId);
@@ -58,40 +57,26 @@ export default function Home() {
       return;
     }
 
-    // Number keys 1–9, 0 (Direct Pad Trigger 1 to 10)
-    if (e.key >= '1' && e.key <= '9') {
-      const idx = parseInt(e.key) - 1;
-      if (idx < section.chords.length) {
-        triggerPad(activeSectionId, idx);
-      }
+    // Space or ArrowRight: Advance Sequence Timeline
+    if (e.key === ' ' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      usePadStore.getState().stepSequence('next');
       return;
     }
-    if (e.key === '0') {
-      if (9 < section.chords.length) {
-        triggerPad(activeSectionId, 9);
-      }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      usePadStore.getState().stepSequence('prev');
       return;
     }
 
-    // Launchpad Row 2: A S D F G H J K L (Direct Pad Trigger 11+)
-    const LETTER_KEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
-    const letterIdx = LETTER_KEYS.indexOf(e.key.toUpperCase());
-    if (letterIdx !== -1) {
-      const padIdx = 10 + letterIdx; // Pad 11 onwards
-      if (padIdx < section.chords.length) {
-        triggerPad(activeSectionId, padIdx);
-      }
+    // Direct Ergonomic Key Trigger (QWER / ASDF / ZXCV)
+    const ERGONOMIC_KEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
+    if (ERGONOMIC_KEYS.includes(key)) {
+      e.preventDefault();
+      usePadStore.getState().triggerPadByHotkey(key);
       return;
     }
-
-    // Section hotkeys Q W E R T
-    const upperKey = e.key.toUpperCase();
-    const sectionIdx = SECTION_HOTKEYS.indexOf(upperKey);
-    if (sectionIdx !== -1 && sectionIdx < sections.length) {
-      setActiveSection(sections[sectionIdx].id);
-      return;
-    }
-  }, [sections, activeSectionId, triggerPad, setActiveSection]);
+  }, [sections, activeSectionId, setActiveSection]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -184,9 +169,9 @@ export default function Home() {
           <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 flex-wrap text-xs font-mono text-gray-400">
               <span className="text-[#D4AF37] font-bold">Phím tắt:</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">→</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Space</kbd> Đệm hợp âm tiếp theo</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">1</kbd>–<kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">9</kbd> Bấm trực tiếp Pad</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">W</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">E</kbd> Đổi đoạn</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q W E R</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">A S D F</kbd> Gõ trực tiếp Pad</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Space</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">→</kbd> Tiến phách bài hát</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">↑</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">↓</kbd> Đổi đoạn</span>
             </div>
             <button
               onClick={() => setShowHints(false)}
@@ -223,7 +208,7 @@ export default function Home() {
             >
               <span className="text-[10px] opacity-60">{SECTION_HOTKEYS[idx] || ''}</span>
               <span>{section.name}</span>
-              <span className="text-[10px] opacity-60">{section.chords.length} hợp âm</span>
+              <span className="text-[10px] opacity-60">{section.uniquePads.length} Hợp Âm Độc Nhất</span>
             </button>
           ))}
 
@@ -244,9 +229,9 @@ export default function Home() {
               key={section.id}
               sectionId={section.id}
               sectionName={section.name}
-              chords={section.chords}
+              sequence={section.sequence}
+              uniquePads={section.uniquePads}
               isActive={section.id === activeSectionId}
-              hotkey={SECTION_HOTKEYS[idx] || ''}
               onSelect={() => setActiveSection(section.id)}
             />
           ))}

@@ -1,38 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePadStore } from '../../store/usePadStore';
+import { usePadStore, UniquePad, SequenceItem } from '../../store/usePadStore';
 import { ChordPad } from './ChordPad';
+import { SequenceRibbon } from './SequenceRibbon';
 import { ChordSelectorModal } from '../chords/ChordSelectorModal';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
-
-import { PadItem } from '../../store/usePadStore';
 
 interface SectionPadGroupProps {
   sectionId: string;
   sectionName: string;
-  chords: PadItem[];
+  sequence: SequenceItem[];
+  uniquePads: UniquePad[];
   isActive: boolean;
-  hotkey: string;
   onSelect: () => void;
 }
 
 export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
   sectionId,
   sectionName,
-  chords,
+  sequence,
+  uniquePads,
   isActive,
-  hotkey,
   onSelect,
 }) => {
   const {
     activePadKey,
+    activeSequenceIndex,
     removeChordFromSection,
     addChordToSection,
     updateSectionName,
     removeSection,
     sections,
-    triggerPad,
   } = usePadStore();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,6 +48,11 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
     setEditingName(false);
   };
 
+  // Group unique pads by category/row (Primary = QWER, Secondary = ASDF, Passing = ZXCV)
+  const primaryPads = uniquePads.filter(p => p.category === 'primary');
+  const secondaryPads = uniquePads.filter(p => p.category === 'secondary');
+  const passingPads = uniquePads.filter(p => p.category === 'passing');
+
   return (
     <div
       className={`rounded-3xl border-2 transition-all duration-200 overflow-hidden ${
@@ -58,24 +62,14 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
       }`}
       onClick={() => !isActive && onSelect()}
     >
-      {/* Active top bar */}
+      {/* Top Gold Accent */}
       {isActive && (
         <div className="h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
       )}
 
       {/* Section Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#2B2E38]">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2B2E38]">
         <div className="flex items-center gap-3">
-          {/* Hotkey badge */}
-          <span className={`text-xs font-mono font-bold px-2 py-1 rounded-lg border ${
-            isActive
-              ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]'
-              : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400'
-          }`}>
-            {hotkey}
-          </span>
-
-          {/* Section Name Edit */}
           {editingName ? (
             <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
               <input
@@ -105,13 +99,13 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
           )}
 
           {isActive && (
-            <span className="text-[10px] font-mono text-[#D4AF37] bg-[#D4AF37]/10 px-2 py-0.5 rounded-full border border-[#D4AF37]/30">
+            <span className="text-[10px] font-mono text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-0.5 rounded-full border border-[#D4AF37]/30 font-bold">
               ĐANG CHỌN
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isActive && sections.length > 1 && (
             <button
               onClick={e => { e.stopPropagation(); removeSection(sectionId); }}
@@ -121,38 +115,95 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
-          <span className="text-xs font-mono text-gray-500">
-            {chords.length}/8 hợp âm
+          <span className="text-xs font-mono text-gray-400">
+            {uniquePads.length} Hợp Âm Độc Nhất · {sequence.length} Phách Tiến Trình
           </span>
         </div>
       </div>
 
-      {/* Pad Grid */}
-      <div className={`p-4 ${!isActive ? 'opacity-50 pointer-events-none' : ''}`}>
-        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
-          {chords.map((item, idx) => {
-            const padKey = `${sectionId}:${idx}`;
-            return (
-              <ChordPad
-                key={`${item.chord}-${idx}`}
-                chordStr={item.chord}
-                lyric={item.lyric}
-                index={idx}
-                sectionId={sectionId}
-                isActive={activePadKey === padKey}
-                onRemove={() => removeChordFromSection(sectionId, idx)}
-              />
-            );
-          })}
+      <div className={`p-4 space-y-5 ${!isActive ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* 1. Sequence Ribbon (Song Progression Timeline) */}
+        <SequenceRibbon sequence={sequence} activeIdx={activeSequenceIndex} />
+
+        {/* 2. Ergonomic 12-Key Pad Grid (QWER / ASDF / ZXCV) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">
+              Dàn Phím Đệm Tự Nhiên (12-Key Ergonomic Pads)
+            </span>
+            <span className="text-[10px] font-mono text-gray-500">
+              Gõ QWER · ASDF · ZXCV
+            </span>
+          </div>
+
+          {/* Row 1: Primary Pads (Q W E R) */}
+          {primaryPads.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              {primaryPads.map((pad, idx) => {
+                const uniqueIdx = uniquePads.indexOf(pad);
+                const padKey = `${sectionId}:${uniqueIdx}`;
+                return (
+                  <ChordPad
+                    key={`${pad.chord}-${uniqueIdx}`}
+                    uniquePad={pad}
+                    index={uniqueIdx}
+                    sectionId={sectionId}
+                    isActive={activePadKey === padKey}
+                    onRemove={() => removeChordFromSection(sectionId, uniqueIdx)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Row 2: Secondary Pads (A S D F) */}
+          {secondaryPads.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              {secondaryPads.map((pad, idx) => {
+                const uniqueIdx = uniquePads.indexOf(pad);
+                const padKey = `${sectionId}:${uniqueIdx}`;
+                return (
+                  <ChordPad
+                    key={`${pad.chord}-${uniqueIdx}`}
+                    uniquePad={pad}
+                    index={uniqueIdx}
+                    sectionId={sectionId}
+                    isActive={activePadKey === padKey}
+                    onRemove={() => removeChordFromSection(sectionId, uniqueIdx)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Row 3: Passing Pads (Z X C V) */}
+          {passingPads.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              {passingPads.map((pad, idx) => {
+                const uniqueIdx = uniquePads.indexOf(pad);
+                const padKey = `${sectionId}:${uniqueIdx}`;
+                return (
+                  <ChordPad
+                    key={`${pad.chord}-${uniqueIdx}`}
+                    uniquePad={pad}
+                    index={uniqueIdx}
+                    sectionId={sectionId}
+                    isActive={activePadKey === padKey}
+                    onRemove={() => removeChordFromSection(sectionId, uniqueIdx)}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* Add Chord Button */}
-          {chords.length < 8 && (
+          {uniquePads.length < 12 && (
             <button
               onClick={e => { e.stopPropagation(); setModalOpen(true); }}
-              className="min-h-[90px] rounded-2xl border-2 border-dashed border-[#2B2E38] hover:border-[#D4AF37] bg-[#0B0C10] hover:bg-[#21242E] text-[#D4AF37] flex flex-col items-center justify-center gap-1 transition-all hover:scale-[1.02]"
+              className="w-full py-3 rounded-2xl border-2 border-dashed border-[#2B2E38] hover:border-[#D4AF37] bg-[#0B0C10] hover:bg-[#21242E] text-[#D4AF37] flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
             >
-              <Plus className="w-6 h-6" />
-              <span className="text-[10px] font-mono uppercase">Thêm</span>
+              <Plus className="w-4 h-4" />
+              <span className="text-xs font-mono font-bold uppercase">Thêm Hợp Âm Vào Vòng</span>
             </button>
           )}
         </div>

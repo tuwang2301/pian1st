@@ -58,8 +58,9 @@ class ChordPadEngine {
   private activeNodes: Array<{ source: AudioBufferSourceNode; gain: GainNode }> = [];
   private activeSynthNodes: Array<{ osc: OscillatorNode; gain: GainNode }> = [];
 
-  // Previous chord for voice leading
+  // Previous chord tracking
   private previousTrebleMidi: number[] = [];
+  private previousChordStr: string = '';
 
   // ─── Initialization ───────────────────────────────────────────────────────
 
@@ -211,38 +212,44 @@ class ChordPadEngine {
       this.preloadSamples(settings.pianoType);
     }
 
-    // Fade out all currently playing nodes
-    this.fadeOutCurrentNotes(ctx);
+    // Detect if this is a re-strike of the same chord string
+    const isSameChord = this.previousChordStr === chordStr;
+    this.previousChordStr = chordStr;
+
+    // Fast fade out for previous notes to prevent muddy overlap or delay dip
+    this.fadeOutCurrentNotes(ctx, isSameChord ? 0.015 : 0.04);
 
     // Calculate voicing
     const voicing = getPianoVoicing(chordStr, settings.octave);
 
     // Apply voice leading to treble notes
-    const ledTreble = this.previousTrebleMidi.length > 0
+    const ledTreble = (!isSameChord && this.previousTrebleMidi.length > 0)
       ? findClosestVoicing(voicing.trebleMidi, this.previousTrebleMidi, settings.octave)
       : voicing.trebleMidi;
 
     this.previousTrebleMidi = ledTreble;
 
     const velocityGain = { soft: 0.6, medium: 0.88, strong: 1.05 }[settings.velocity];
-    const now = ctx.currentTime + 0.01;
+    const now = ctx.currentTime; // Immediate attack (0ms offset)
 
-    // 1. Play Bass notes (Left Hand - Root + 5th Quinta) with punchy warm attack
-    const bassStagger = 0.025; // 25ms delay between root and 5th
+    // Re-strike speed: Faster roll (12ms) if tapping same chord, 22ms for new chord
+    const bassStagger = isSameChord ? 0.012 : 0.02;
+    const trebleRollSpread = isSameChord ? 0.015 : 0.025;
+
+    // 1. Play Bass notes (Left Hand - Root + 5th Quinta)
     voicing.bassMidi.forEach((midi, i) => {
       const delay = i * bassStagger;
       this.playNote(midi, now + delay, settings.sustain * 1.1, velocityGain * 0.95, settings.pianoType);
     });
 
-    // 2. Play Treble notes (Right Hand - Voice Led) with natural fingerpicking roll
+    // 2. Play Treble notes (Right Hand - Voice Led)
     const bassTotalDuration = voicing.bassMidi.length * bassStagger;
-    const trebleRollSpread = 0.03; // 30ms natural roll between treble notes
     ledTreble.forEach((midi, i) => {
       const delay = bassTotalDuration + (i * trebleRollSpread);
-      this.playNote(midi, now + delay, settings.sustain, velocityGain * (1.0 - i * 0.04), settings.pianoType);
+      this.playNote(midi, now + delay, settings.sustain, velocityGain * (1.0 - i * 0.03), settings.pianoType);
     });
 
-    // Preload any un-cached notes asynchronously for seamless future plays
+    // Async preload missing notes
     [...voicing.bassMidi, ...ledTreble].forEach(midi => {
       this.loadSample(midi, settings.pianoType);
     });
@@ -329,22 +336,21 @@ class ChordPadEngine {
     });
   }
 
-  // Fade out all currently playing notes (on chord change)
-  private fadeOutCurrentNotes(ctx: AudioContext) {
+  // Fade out all currently playing notes (on chord change or fast re-strike)
+  private fadeOutCurrentNotes(ctx: AudioContext, fadeTimeSec: number = 0.03) {
     const now = ctx.currentTime;
-    const fadeTime = 0.08; // 80ms fade-out
 
     this.activeNodes.forEach(({ gain }) => {
       try {
         gain.gain.cancelScheduledValues(now);
-        gain.gain.setTargetAtTime(0.0001, now, fadeTime / 3);
+        gain.gain.setTargetAtTime(0.0001, now, Math.max(0.005, fadeTimeSec / 3));
       } catch { /* node already disconnected */ }
     });
 
     this.activeSynthNodes.forEach(({ gain }) => {
       try {
         gain.gain.cancelScheduledValues(now);
-        gain.gain.setTargetAtTime(0.0001, now, fadeTime / 3);
+        gain.gain.setTargetAtTime(0.0001, now, Math.max(0.005, fadeTimeSec / 3));
       } catch { /* node already disconnected */ }
     });
 
@@ -354,6 +360,7 @@ class ChordPadEngine {
 
   public resetPreviousChord() {
     this.previousTrebleMidi = [];
+    this.previousChordStr = '';
   }
 
   public async ensureSamplesLoaded(pianoType: AudioSettings['pianoType']) {

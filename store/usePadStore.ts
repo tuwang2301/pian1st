@@ -182,16 +182,13 @@ export const usePadStore = create<PadState>((set, get) => ({
     const chordStr = section.chords[padIdx];
     const settings = get().audioSettings;
 
-    set({ activePadKey: `${sectionId}:${padIdx}` });
+    // Reset pad key briefly to force UI pulse effect even when clicking the same pad repeatedly
+    set({ activePadKey: null });
+    requestAnimationFrame(() => {
+      set({ activePadKey: `${sectionId}:${padIdx}` });
+    });
 
     padEngine.triggerChordPad(chordStr, settings);
-
-    // Clear active highlight after sustain time
-    setTimeout(() => {
-      if (get().activePadKey === `${sectionId}:${padIdx}`) {
-        set({ activePadKey: null });
-      }
-    }, (settings.sustain * 1000) + 500);
   },
 
   loadTimEmPreset: () => {

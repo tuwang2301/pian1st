@@ -71,16 +71,21 @@ export const ChordSheetParser: React.FC = () => {
         <div className="space-y-3">
           <p className="text-xs font-mono text-gray-400 uppercase">Xem trước kết quả Pad & Lời:</p>
           {preview.map((section, i) => (
-            <div key={i} className="bg-[#0B0C10] rounded-xl p-3 border border-[#2B2E38]">
-              <p className="text-[#D4AF37] font-mono text-xs font-bold mb-2">{section.name}</p>
-              <div className="flex flex-wrap gap-2">
-                {section.chords.map((item, j) => (
-                  <div key={j} className="px-3 py-1.5 bg-[#F5F2EB] text-[#121316] rounded-xl border border-[#2B2E38] flex flex-col items-center">
-                    <span className="font-display font-black text-sm">{item.chord}</span>
-                    {item.lyric && <span className="font-sans text-[10px] text-gray-600">{item.lyric}</span>}
+            <div key={i} className="bg-[#0B0C10] rounded-xl p-3 border border-[#2B2E38] space-y-2">
+              <p className="text-[#D4AF37] font-mono text-xs font-bold">{section.name}</p>
+              {section.lines.map((line, lIdx) => (
+                <div key={lIdx} className="space-y-1">
+                  <span className="text-[10px] font-mono text-gray-500">{line.lineName}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {line.chords.map((item, j) => (
+                      <div key={j} className="px-3 py-1.5 bg-[#F5F2EB] text-[#121316] rounded-xl border border-[#2B2E38] flex flex-col items-center">
+                        <span className="font-display font-black text-sm">{item.chord}</span>
+                        {item.lyric && <span className="font-sans text-[10px] text-gray-600">{item.lyric}</span>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>

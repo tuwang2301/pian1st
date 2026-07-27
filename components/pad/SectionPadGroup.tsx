@@ -167,11 +167,6 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
                             }`}
                           >
                             <span className="font-display font-black text-sm">{item.chord}</span>
-                            {item.lyric && (
-                              <span className={`text-[10px] font-sans truncate max-w-[100px] ${isChordActive ? 'text-[#0B0C10]/90 font-semibold' : 'text-gray-400'}`}>
-                                {item.lyric}
-                              </span>
-                            )}
                           </div>
                           {chordIdx < line.chords.length - 1 && (
                             <ChevronRight className="w-3 h-3 text-gray-600 flex-shrink-0" />

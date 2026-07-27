@@ -26,6 +26,7 @@ export function parseChordSheet(raw: string): ParsedSection[] {
   const sections: ParsedSection[] = [];
   let currentSectionName = 'Verse';
   let currentLines: ParsedLine[] = [];
+  let seenSignatures = new Set<string>();
 
   const SECTION_HEADER_REGEX = /^(verse|chorus|điệp khúc|phiên khúc|hook|bridge|intro|outro|pre-chorus|pre chorus|refrain|coda|rap|lên nửa tone|đoạn \w+)[:\s\d]*/i;
   const CHORD_TOKEN_REGEX = /\b([A-Ga-g][#b]?(?:m(?:aj)?7?|maj7?|M7|7|9|11|13|dim7?|aug|sus[24]?|add9|6|m6|\+)?(?:\/[A-Ga-g][#b]?)?)\b/g;
@@ -41,6 +42,7 @@ export function parseChordSheet(raw: string): ParsedSection[] {
       if (currentLines.length > 0) {
         sections.push({ name: currentSectionName, lines: currentLines });
         currentLines = [];
+        seenSignatures.clear();
         lineCounter = 1;
       }
       currentSectionName = capitalize(line.replace(/:/g, '').trim());
@@ -74,26 +76,28 @@ export function parseChordSheet(raw: string): ParsedSection[] {
 
         matches.forEach((m, idx) => {
           const chord = m[1];
-          const colStart = m.index ?? 0;
-          const colEnd = idx < matches.length - 1 ? (matches[idx + 1].index ?? nextLine.length) : nextLine.length;
-
-          let lyricSnippet = nextLine.substring(colStart, colEnd).trim();
-          lyricSnippet = lyricSnippet.replace(/^[-–—,.:;!|]+/g, '').trim();
-
-          lineChords.push({ chord, lyric: lyricSnippet || undefined });
+          lineChords.push({ chord });
         });
 
-        if (nextLine) i++; // skip next line since it was consumed as lyrics
+        if (nextLine) i++; // skip next line
       }
     }
 
     if (lineChords.length > 0) {
-      currentLines.push({
-        id: `l-${Date.now()}-${lineCounter}`,
-        lineName: `Vòng ${lineCounter}`,
-        chords: lineChords,
-      });
-      lineCounter++;
+      // Progression Mining Deduplication:
+      // Calculate chord progression signature (e.g. "Dm7-G7-Cmaj7-A7")
+      const sig = lineChords.map(c => c.chord).join('-');
+
+      // Deduplicate identical chord progression lines to prevent UI scroll fatigue
+      if (!seenSignatures.has(sig)) {
+        seenSignatures.add(sig);
+        currentLines.push({
+          id: `l-${Date.now()}-${lineCounter}`,
+          lineName: `Vòng ${lineCounter}`,
+          chords: lineChords,
+        });
+        lineCounter++;
+      }
     }
   }
 
@@ -121,29 +125,13 @@ export function parseChordSheet(raw: string): ParsedSection[] {
  */
 function parseBracketLine(line: string): ChordLyricPair[] {
   const pairs: ChordLyricPair[] = [];
-  const segments = line.split(/(\[[^\]]+\])/).filter(Boolean);
+  const matches = [...line.matchAll(/\[([^\]]+)\]/g)];
 
-  let currentChord = '';
-  for (const seg of segments) {
-    if (seg.startsWith('[') && seg.endsWith(']')) {
-      const candidate = seg.slice(1, -1).trim();
-      if (isChordName(candidate)) {
-        if (currentChord) {
-          pairs.push({ chord: currentChord, lyric: '' });
-        }
-        currentChord = candidate;
-      }
-    } else {
-      const lyricText = seg.trim();
-      if (currentChord) {
-        pairs.push({ chord: currentChord, lyric: lyricText });
-        currentChord = '';
-      }
+  for (const m of matches) {
+    const candidate = m[1].trim();
+    if (isChordName(candidate)) {
+      pairs.push({ chord: candidate });
     }
-  }
-
-  if (currentChord) {
-    pairs.push({ chord: currentChord, lyric: '' });
   }
 
   return pairs;

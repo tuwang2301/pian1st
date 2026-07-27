@@ -216,8 +216,8 @@ class ChordPadEngine {
     const isSameChord = this.previousChordStr === chordStr;
     this.previousChordStr = chordStr;
 
-    // Fast fade out for previous notes to prevent muddy overlap or delay dip
-    this.fadeOutCurrentNotes(ctx, isSameChord ? 0.015 : 0.04);
+    // Smooth Acoustic Pedal Release: 220ms release decay for previous chord when transitioning chords, 20ms for re-strikes
+    this.fadeOutCurrentNotes(ctx, isSameChord ? 0.02 : 0.22);
 
     // Calculate voicing
     const voicing = getPianoVoicing(chordStr, settings.octave);

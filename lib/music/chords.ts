@@ -204,5 +204,11 @@ export function transposeChord(chordStr: string, semitones: number): string {
   return `${newRoot}${parsed.quality}${newBass ? `/${newBass}` : ''}`;
 }
 
-// Key signatures list for dropdown
-export const ALL_KEYS: NoteName[] = [...NOTE_NAMES];
+// Key signatures list for dropdown (Major & Minor keys)
+export const ALL_KEYS = [
+  'C', 'Cm', 'C#', 'C#m', 'D', 'Dm', 'D#', 'D#m', 'E', 'Em', 'F', 'Fm',
+  'F#', 'F#m', 'G', 'Gm', 'G#', 'G#m', 'A', 'Am', 'A#', 'A#m', 'B', 'Bm'
+] as const;
+
+export type KeyName = typeof ALL_KEYS[number];
+

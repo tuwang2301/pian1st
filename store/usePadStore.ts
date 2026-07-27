@@ -86,6 +86,7 @@ export interface PadState {
   loadTimEmPreset: () => void;
   loadVanLuonLaAnhPreset: () => void;
   loadKhongBietGiPreset: () => void;
+  loadTheGioiHoanHaoPreset: () => void;
 }
 
 // Preset data for "Vẫn Luôn Là Anh"
@@ -470,6 +471,35 @@ export const usePadStore = create<PadState>((set, get) => ({
       key: 'G',
       sections: [PRESET_KHONG_BIET_GI_SECTION],
       activeSectionId: 'sec-khongbietgi',
+      activeLineIndex: 0,
+      activeChordIndex: -1,
+    });
+  },
+
+  loadTheGioiHoanHaoPreset: () => {
+    padEngine.resetPreviousChord();
+    set({
+      songTitle: 'Thế Giới Hoàn Hảo',
+      key: 'D',
+      sections: [
+        {
+          id: 'sec-tghh',
+          name: 'Bài Hát: Thế Giới Hoàn Hảo',
+          lines: [
+            {
+              id: 'tghh-l1',
+              lineName: 'Vòng Đệm Chính (R&B 4 Hợp Âm)',
+              chords: [
+                { id: 'h1', chord: 'Dm7' },
+                { id: 'h2', chord: 'G7' },
+                { id: 'h3', chord: 'Cmaj7' },
+                { id: 'h4', chord: 'A7' },
+              ],
+            },
+          ],
+        },
+      ],
+      activeSectionId: 'sec-tghh',
       activeLineIndex: 0,
       activeChordIndex: -1,
     });

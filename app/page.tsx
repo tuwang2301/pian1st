@@ -24,6 +24,7 @@ export default function Home() {
     loadTimEmPreset,
     loadVanLuonLaAnhPreset,
     loadKhongBietGiPreset,
+    loadTheGioiHoanHaoPreset,
   } = usePadStore();
 
   const [showAudio, setShowAudio] = useState(false);
@@ -107,24 +108,24 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {/* Presets */}
             <button
-              onClick={loadVanLuonLaAnhPreset}
+              onClick={loadTheGioiHoanHaoPreset}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
+            >
+              Thế Giới Hoàn Hảo (Dm7-G7-Cmaj7-A7)
+            </button>
+
+            <button
+              onClick={loadVanLuonLaAnhPreset}
+              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#2B2E38] text-gray-300 text-xs font-mono font-bold transition-all hover:border-gray-500"
             >
               Vẫn Luôn Là Anh
             </button>
 
             <button
               onClick={loadKhongBietGiPreset}
-              className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
-            >
-              Không Biết Gì (Jazz Pop)
-            </button>
-
-            <button
-              onClick={loadTimEmPreset}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#2B2E38] text-gray-300 text-xs font-mono font-bold transition-all hover:border-gray-500"
             >
-              Tìm Em
+              Không Biết Gì
             </button>
 
             {/* Audio Settings toggle */}

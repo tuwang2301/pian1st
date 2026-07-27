@@ -26,7 +26,8 @@ export const ChordPad: React.FC<ChordPadProps> = ({
   const [isPressed, setIsPressed] = useState(false);
   const parsed = parseChord(chordStr);
 
-  const hotkey = index < 8 ? String(index + 1) : null;
+  const HOTKEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
+  const hotkey = HOTKEYS[index] || null;
 
   const handlePress = (e: React.PointerEvent | React.MouseEvent) => {
     e.preventDefault();

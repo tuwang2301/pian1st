@@ -43,43 +43,48 @@ export default function Home() {
     const section = sections.find(s => s.id === activeSectionId);
     if (!section || section.chords.length === 0) return;
 
-    const currentPadKey = usePadStore.getState().activePadKey;
-    const currentIdx = currentPadKey ? parseInt(currentPadKey.split(':')[1]) : -1;
-
-    // ArrowRight or Space: trigger NEXT pad
-    if (e.key === 'ArrowRight' || e.key === ' ') {
+    // ArrowUp / ArrowDown: Switch Section (Verse <-> Chorus <-> Bridge)
+    const currentSectionIdx = sections.findIndex(s => s.id === activeSectionId);
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const nextIdx = (currentIdx + 1) % section.chords.length;
-      triggerPad(activeSectionId, nextIdx);
+      const nextSecIdx = (currentSectionIdx + 1) % sections.length;
+      setActiveSection(sections[nextSecIdx].id);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevSecIdx = currentSectionIdx <= 0 ? sections.length - 1 : currentSectionIdx - 1;
+      setActiveSection(sections[prevSecIdx].id);
       return;
     }
 
-    // ArrowLeft: trigger PREVIOUS pad
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      const prevIdx = currentIdx <= 0 ? section.chords.length - 1 : currentIdx - 1;
-      triggerPad(activeSectionId, prevIdx);
+    // Number keys 1–9, 0 (Direct Pad Trigger 1 to 10)
+    if (e.key >= '1' && e.key <= '9') {
+      const idx = parseInt(e.key) - 1;
+      if (idx < section.chords.length) {
+        triggerPad(activeSectionId, idx);
+      }
       return;
     }
-
-    // Number keys 1–9, 0
-    const num = parseInt(e.key);
-    if (!isNaN(num) && num >= 1 && num <= 9) {
-      if (num - 1 < section.chords.length) {
-        triggerPad(activeSectionId, num - 1);
+    if (e.key === '0') {
+      if (9 < section.chords.length) {
+        triggerPad(activeSectionId, 9);
       }
       return;
     }
 
-    // Launchpad letter keys A S D F G H J K
-    const LETTER_KEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
+    // Launchpad Row 2: A S D F G H J K L (Direct Pad Trigger 11+)
+    const LETTER_KEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
     const letterIdx = LETTER_KEYS.indexOf(e.key.toUpperCase());
-    if (letterIdx !== -1 && letterIdx < section.chords.length) {
-      triggerPad(activeSectionId, letterIdx);
+    if (letterIdx !== -1) {
+      const padIdx = 10 + letterIdx; // Pad 11 onwards
+      if (padIdx < section.chords.length) {
+        triggerPad(activeSectionId, padIdx);
+      }
       return;
     }
 
-    // Q W E R T: switch sections
+    // Section hotkeys Q W E R T
     const upperKey = e.key.toUpperCase();
     const sectionIdx = SECTION_HOTKEYS.indexOf(upperKey);
     if (sectionIdx !== -1 && sectionIdx < sections.length) {

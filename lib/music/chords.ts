@@ -4,9 +4,13 @@ export const NOTE_NAMES = [
   'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
 ] as const;
 
+export const FLAT_NOTE_NAMES = [
+  'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+] as const;
+
 export type NoteName = typeof NOTE_NAMES[number];
 
-// Flat to Sharp map for standardizing input
+// Flat to Sharp map for MIDI calculations
 const FLAT_TO_SHARP_MAP: Record<string, NoteName> = {
   'Db': 'C#',
   'Eb': 'D#',
@@ -19,7 +23,13 @@ const FLAT_TO_SHARP_MAP: Record<string, NoteName> = {
   'E#': 'F'
 };
 
-// Standardize note name to Sharp notation
+// Map MIDI index (0-11) to display note, preserving flat preference if requested
+export function getDisplayNoteName(midiIndex: number, useFlat: boolean = false): string {
+  const idx = ((midiIndex % 12) + 12) % 12;
+  return useFlat ? FLAT_NOTE_NAMES[idx] : NOTE_NAMES[idx];
+}
+
+// Standardize note name to Sharp notation for MIDI lookup
 export function normalizeNoteName(noteStr: string): NoteName {
   const clean = noteStr.trim();
   if (FLAT_TO_SHARP_MAP[clean]) {
@@ -69,8 +79,10 @@ const CHORD_FORMULAS: Record<string, number[]> = {
 export interface ParsedChord {
   raw: string;
   root: NoteName;
+  rootDisplay: string;
   quality: string;
   bass?: NoteName;
+  bassDisplay?: string;
   displayName: string;
 }
 
@@ -78,42 +90,46 @@ export interface ParsedChord {
 export function parseChord(chordStr: string): ParsedChord {
   const str = chordStr.trim();
   if (!str) {
-    return { raw: '', root: 'C', quality: '', displayName: 'C' };
+    return { raw: '', root: 'C', rootDisplay: 'C', quality: '', displayName: 'C' };
   }
 
-  // Check for slash bass (e.g. C/E)
+  // Check for slash bass (e.g. C/E or Bb/F)
   const parts = str.split('/');
   const mainPart = parts[0].trim();
-  const bassPart = parts[1] ? normalizeNoteName(parts[1].trim()) : undefined;
+  const rawBass = parts[1] ? parts[1].trim() : undefined;
+  const bassPart = rawBass ? normalizeNoteName(rawBass) : undefined;
+  const bassDisplay = rawBass ? (rawBass.charAt(0).toUpperCase() + rawBass.slice(1)) : undefined;
 
   // Regex to extract Root (A-G with optional # or b) and Quality
   const match = mainPart.match(/^([A-Ga-g][#b]?)(.*)$/);
   if (!match) {
-    return { raw: str, root: 'C', quality: '', displayName: str };
+    return { raw: str, root: 'C', rootDisplay: str, quality: '', displayName: str };
   }
 
-  const root = normalizeNoteName(match[1]);
+  const rawRoot = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+  const root = normalizeNoteName(rawRoot);
   let quality = match[2].trim();
 
   // Standardize quality key
   let normalizedQuality = quality;
   if (!CHORD_FORMULAS[quality]) {
-    // Try lowercase or common aliases
     const lower = quality.toLowerCase();
     if (CHORD_FORMULAS[lower]) {
       normalizedQuality = lower;
     } else if (lower === 'maj' || lower === 'M') {
       normalizedQuality = '';
     } else {
-      normalizedQuality = ''; // Default fallback to major
+      normalizedQuality = '';
     }
   }
 
   return {
     raw: str,
     root,
+    rootDisplay: rawRoot,
     quality: normalizedQuality,
     bass: bassPart,
+    bassDisplay,
     displayName: str,
   };
 }

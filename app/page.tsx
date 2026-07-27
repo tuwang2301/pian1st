@@ -40,13 +40,42 @@ export default function Home() {
     const tag = (e.target as HTMLElement).tagName.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
-    // Number keys 1–8: trigger pad in active section
+    const section = sections.find(s => s.id === activeSectionId);
+    if (!section || section.chords.length === 0) return;
+
+    const currentPadKey = usePadStore.getState().activePadKey;
+    const currentIdx = currentPadKey ? parseInt(currentPadKey.split(':')[1]) : -1;
+
+    // ArrowRight or Space: trigger NEXT pad
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      const nextIdx = (currentIdx + 1) % section.chords.length;
+      triggerPad(activeSectionId, nextIdx);
+      return;
+    }
+
+    // ArrowLeft: trigger PREVIOUS pad
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prevIdx = currentIdx <= 0 ? section.chords.length - 1 : currentIdx - 1;
+      triggerPad(activeSectionId, prevIdx);
+      return;
+    }
+
+    // Number keys 1–9, 0
     const num = parseInt(e.key);
-    if (!isNaN(num) && num >= 1 && num <= 8) {
-      const section = sections.find(s => s.id === activeSectionId);
-      if (section && num - 1 < section.chords.length) {
+    if (!isNaN(num) && num >= 1 && num <= 9) {
+      if (num - 1 < section.chords.length) {
         triggerPad(activeSectionId, num - 1);
       }
+      return;
+    }
+
+    // Launchpad letter keys A S D F G H J K
+    const LETTER_KEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
+    const letterIdx = LETTER_KEYS.indexOf(e.key.toUpperCase());
+    if (letterIdx !== -1 && letterIdx < section.chords.length) {
+      triggerPad(activeSectionId, letterIdx);
       return;
     }
 
@@ -111,14 +140,14 @@ export default function Home() {
               onClick={() => usePadStore.getState().loadTimEmPreset()}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
             >
-              🎵 Tìm Em
+              Tìm Em
             </button>
 
             <button
               onClick={() => usePadStore.getState().loadNeuNhuTaChangConPreset()}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37]"
             >
-              🎵 Nếu Như Ta Chẳng Còn (#86874)
+              Nếu Như Ta Chẳng Còn (#86874)
             </button>
 
             {/* Audio Settings toggle */}
@@ -149,15 +178,16 @@ export default function Home() {
         {showHints && (
           <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 flex-wrap text-xs font-mono text-gray-400">
-              <span className="text-[#D4AF37] font-bold">⌨️ Phím tắt:</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">1</kbd>–<kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">8</kbd> Bấm hợp âm trong đoạn đang chọn</span>
-              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">W</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">E</kbd> Đổi đoạn (Verse / Chorus / Bridge)</span>
+              <span className="text-[#D4AF37] font-bold">Phím tắt:</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">→</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Space</kbd> Đệm hợp âm tiếp theo</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">1</kbd>–<kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">9</kbd> Bấm trực tiếp Pad</span>
+              <span><kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">Q</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">W</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB]">E</kbd> Đổi đoạn</span>
             </div>
             <button
               onClick={() => setShowHints(false)}
-              className="text-gray-500 hover:text-gray-300 transition-colors ml-3 flex-shrink-0"
+              className="text-gray-500 hover:text-gray-300 transition-colors ml-3 text-xs font-mono"
             >
-              ✕
+              Đóng
             </button>
           </div>
         )}

@@ -80,16 +80,16 @@ export const ChordPad: React.FC<ChordPadProps> = ({
           <span className={`font-display font-black tracking-tight ${
             isActive ? 'text-[#0B0C10] text-3xl' : 'text-[#121316] text-2xl'
           }`}>
-            {parsed.root}
+            {parsed.rootDisplay}
           </span>
           {parsed.quality && (
             <span className={`font-mono font-bold text-sm ${isActive ? 'text-[#0B0C10]/80' : 'text-gray-600'}`}>
               {parsed.quality}
             </span>
           )}
-          {parsed.bass && (
+          {parsed.bassDisplay && (
             <span className={`font-mono text-xs ml-0.5 ${isActive ? 'text-[#0B0C10]/70' : 'text-gray-400'}`}>
-              /{parsed.bass}
+              /{parsed.bassDisplay}
             </span>
           )}
         </div>

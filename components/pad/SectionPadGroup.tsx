@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { usePadStore, LineProgression } from '../../store/usePadStore';
 import { ChordPad } from './ChordPad';
 import { ChordSelectorModal } from '../chords/ChordSelectorModal';
-import { Plus, Trash2, Edit2, Check, X, ArrowRight, ArrowDown, ChevronRight } from 'lucide-react';
+import { translations } from '../../lib/i18n/translations';
+import { Plus, Trash2, Edit2, Check, X, ChevronRight } from 'lucide-react';
 
 interface SectionPadGroupProps {
   sectionId: string;
@@ -30,7 +31,10 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
     updateSectionName,
     removeSection,
     sections,
+    language,
   } = usePadStore();
+
+  const t = translations[language];
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -95,7 +99,7 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
 
           {isActive && (
             <span className="text-[10px] font-mono text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-0.5 rounded-full border border-[#D4AF37]/30 font-bold">
-              ĐANG CHỌN
+              {t.selectedTag}
             </span>
           )}
         </div>
@@ -105,13 +109,12 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
             <button
               onClick={e => { e.stopPropagation(); removeSection(sectionId); }}
               className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-              title="Xóa đoạn"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
           <span className="text-xs font-mono text-gray-400">
-            {lines.length} Vòng Hợp Âm
+            {lines.length} {t.progressionLinesCount}
           </span>
         </div>
       </div>
@@ -122,10 +125,10 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">
-              Danh Sách Vòng Hợp Âm Bài Hát
+              {t.progressionLinesTitle}
             </span>
             <span className="text-[10px] font-mono text-gray-500">
-              Dùng phím → / ↓ (Tay Phải) để chuyển vòng
+              {t.rightHandNavHint}
             </span>
           </div>
 
@@ -148,7 +151,7 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
                     </span>
                     {isLineActive && (
                       <span className="text-[10px] font-mono text-[#D4AF37] bg-[#D4AF37]/20 px-2 py-0.5 rounded-md font-bold">
-                        ĐANG ĐỆM TAY TRÁI (A S D F G H J K)
+                        {t.activeLineTag}
                       </span>
                     )}
                   </div>
@@ -186,10 +189,10 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-[#D4AF37] uppercase tracking-wider">
-                Tay Trái Gõ Hợp Âm ({activeLine.lineName})
+                {t.leftHandSectionTitle} ({activeLine.lineName})
               </span>
               <span className="text-xs font-mono text-gray-400">
-                Gõ phím Tay Trái: <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-1.5 py-0.5 rounded text-[#D4AF37]">A</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-1.5 py-0.5 rounded text-[#D4AF37]">S</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-1.5 py-0.5 rounded text-[#D4AF37]">D</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-1.5 py-0.5 rounded text-[#D4AF37]">F</kbd>
+                {t.leftHandKeysHint}
               </span>
             </div>
 
@@ -214,7 +217,7 @@ export const SectionPadGroup: React.FC<SectionPadGroupProps> = ({
                   className="min-h-[96px] min-w-[90px] rounded-2xl border-2 border-dashed border-[#2B2E38] hover:border-[#D4AF37] bg-[#0B0C10] hover:bg-[#21242E] text-[#D4AF37] flex flex-col items-center justify-center gap-1 transition-all hover:scale-[1.02]"
                 >
                   <Plus className="w-5 h-5" />
-                  <span className="text-[10px] font-mono font-bold uppercase">Thêm Nốt</span>
+                  <span className="text-[10px] font-mono font-bold uppercase">{t.addChord}</span>
                 </button>
               )}
             </div>

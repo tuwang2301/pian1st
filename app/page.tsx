@@ -164,15 +164,15 @@ export default function Home() {
         {showHints && (
           <div className="bg-[#16181E] border border-[#2B2E38] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-xl">
             <div className="flex items-center gap-4 flex-wrap text-xs font-mono text-gray-400">
-              <span className="text-[#D4AF37] font-bold uppercase tracking-wider">Hướng dẫn đệm 2 tay:</span>
-              <span><span className="text-[#F5F2EB] font-bold">Tay Trái:</span> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">A</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">S</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">D</kbd> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#D4AF37] font-bold">F</kbd> Đập Hợp Âm trong dòng</span>
-              <span><span className="text-[#F5F2EB] font-bold">Tay Phải:</span> <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB] font-bold">→</kbd> / <kbd className="bg-[#0B0C10] border border-[#2B2E38] px-2 py-0.5 rounded text-[#F5F2EB] font-bold">↓</kbd> Chuyển Dòng / Vòng tiếp theo</span>
+              <span className="text-[#D4AF37] font-bold uppercase tracking-wider">{t.hintsTitle}</span>
+              <span className="text-[#F5F2EB]">{t.leftHandHint}</span>
+              <span className="text-[#F5F2EB]">{t.rightHandHint}</span>
             </div>
             <button
               onClick={() => setShowHints(false)}
               className="text-gray-500 hover:text-gray-300 transition-colors ml-3 text-xs font-mono"
             >
-              Đóng
+              {t.close}
             </button>
           </div>
         )}

@@ -6,6 +6,8 @@ import { padEngine, AudioSettings, DEFAULT_AUDIO_SETTINGS } from '../lib/audio/p
 import { metronomeEngine } from '../lib/audio/metronomeEngine';
 import { parseChordSheet } from '../lib/music/chordParser';
 
+import { Language } from '../lib/i18n/translations';
+
 export const LEFT_HAND_HOTKEYS = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
 
 export interface PadItem {
@@ -27,6 +29,9 @@ export interface PadSection {
 }
 
 export interface PadState {
+  // Language
+  language: Language;
+
   // Song info
   songTitle: string;
   key: NoteName;
@@ -51,6 +56,7 @@ export interface PadState {
   chordSheetText: string;
 
   // Actions
+  setLanguage: (lang: Language) => void;
   setKey: (key: NoteName) => void;
   setSongTitle: (title: string) => void;
   setBpm: (bpm: number) => void;
@@ -214,6 +220,7 @@ const PRESET_TIM_EM_SECTION: PadSection = {
 };
 
 export const usePadStore = create<PadState>((set, get) => ({
+  language: 'en',
   songTitle: 'Vẫn Luôn Là Anh',
   key: 'D',
   bpm: 85,
@@ -221,6 +228,8 @@ export const usePadStore = create<PadState>((set, get) => ({
   activeBeat: 0,
   isRecording: false,
   isLooping: false,
+
+  setLanguage: (lang: Language) => set({ language: lang }),
 
   sections: [PRESET_VAN_LUON_LA_ANH_SECTION],
   activeSectionId: 'sec-vanluonlaanh',

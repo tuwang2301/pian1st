@@ -9,6 +9,7 @@ import { VirtualKeyboard } from '../components/piano/VirtualKeyboard';
 import { MetronomeBar } from '../components/metronome/MetronomeBar';
 import { ALL_KEYS, NoteName } from '../lib/music/chords';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { translations } from '../lib/i18n/translations';
 import { Music, Plus, Keyboard, SlidersHorizontal } from 'lucide-react';
 
 export default function Home() {
@@ -68,19 +69,22 @@ export default function Home() {
 
   const activeSection = sections.find(s => s.id === activeSectionId) || sections[0];
 
+  const { language } = usePadStore();
+  const t = translations[language];
+
   return (
     <main className="min-h-screen bg-[#0B0C10] flex flex-col font-sans">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-[#16181E]/95 border-b border-[#2B2E38] backdrop-blur-md shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#16181E]/95 border-b border-[#2B2E38] backdrop-blur-md shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#8C6D1F] flex items-center justify-center shadow-brass-glow">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#8C6D1F] flex items-center justify-center shadow-brass-glow">
               <Music className="w-5 h-5 text-[#0B0C10] stroke-[2.5]" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-lg text-[#F5F2EB] leading-none">Pian1st</h1>
-              <p className="text-[10px] text-gray-500 font-mono">Live Piano Studio</p>
+              <h1 className="font-display font-bold text-lg text-[#F5F2EB] leading-none tracking-tight">Pian1st</h1>
+              <p className="text-[10px] text-gray-500 font-mono mt-0.5">{t.brandSubtitle}</p>
             </div>
           </div>
 
@@ -90,11 +94,11 @@ export default function Home() {
               type="text"
               value={songTitle}
               onChange={e => setSongTitle(e.target.value)}
-              placeholder="Tên bài hát..."
-              className="flex-1 bg-[#0B0C10] text-[#F5F2EB] border border-[#2B2E38] focus:border-[#D4AF37] rounded-xl px-4 py-2 font-display font-bold text-sm focus:outline-none placeholder:text-gray-600 transition-all"
+              placeholder={t.songTitlePlaceholder}
+              className="flex-1 bg-[#0B0C10] text-[#F5F2EB] border border-[#2B2E38] focus:border-[#D4AF37] rounded-xl px-4 py-2 font-display font-bold text-sm focus:outline-none placeholder:text-gray-600 transition-all shadow-inner"
             />
-            <div className="flex items-center gap-2 bg-[#0B0C10] border border-[#2B2E38] px-3 py-2 rounded-xl">
-              <span className="text-xs font-mono text-gray-400">Tone:</span>
+            <div className="flex items-center gap-2 bg-[#0B0C10] border border-[#2B2E38] px-3 py-2 rounded-xl shadow-inner">
+              <span className="text-xs font-mono text-gray-400">{t.toneLabel}</span>
               <select
                 value={currentKey}
                 onChange={e => setKey(e.target.value as NoteName)}
@@ -106,7 +110,7 @@ export default function Home() {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Language Switcher */}
             <LanguageSwitcher />
 
@@ -115,28 +119,28 @@ export default function Home() {
               onClick={loadTheGioiHoanHaoPreset}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-mono font-bold transition-all hover:border-[#D4AF37] shadow-brass-glow"
             >
-              Thế Giới Hoàn Hảo (Dm7-G7-Cmaj7-A7)
+              {t.presets.theGioiHoanHao}
             </button>
 
             <button
               onClick={loadVanLuonLaAnhPreset}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#2B2E38] text-gray-300 text-xs font-mono font-bold transition-all hover:border-gray-500"
             >
-              Vẫn Luôn Là Anh
+              {t.presets.vanLuonLaAnh}
             </button>
 
             <button
               onClick={loadKhongBietGiPreset}
               className="px-3 py-2 rounded-xl bg-[#0B0C10] hover:bg-[#21242E] border border-[#2B2E38] text-gray-300 text-xs font-mono font-bold transition-all hover:border-gray-500"
             >
-              Không Biết Gì
+              {t.presets.khongBietGi}
             </button>
 
             {/* Audio Settings toggle */}
             <button
               onClick={() => setShowAudio(v => !v)}
-              className={`p-2.5 rounded-xl border transition-all ${showAudio ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37]' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
-              title="Điều chỉnh âm thanh"
+              className={`p-2.5 rounded-xl border transition-all ${showAudio ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37] shadow-brass-glow' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
+              title={t.audioSettingsTooltip}
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
@@ -144,8 +148,8 @@ export default function Home() {
             {/* Virtual keyboard toggle */}
             <button
               onClick={() => setShowKeyboard(v => !v)}
-              className={`p-2.5 rounded-xl border transition-all ${showKeyboard ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37]' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
-              title="Hiển thị bàn phím ảo"
+              className={`p-2.5 rounded-xl border transition-all ${showKeyboard ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37] shadow-brass-glow' : 'bg-[#0B0C10] border-[#2B2E38] text-gray-400 hover:border-gray-600'}`}
+              title={t.virtualKeyboardTooltip}
             >
               <Keyboard className="w-4 h-4" />
             </button>

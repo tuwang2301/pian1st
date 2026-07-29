@@ -17,7 +17,6 @@ export const ChordPad: React.FC<ChordPadProps> = ({
   index,
   lineIndex,
   isActive,
-  onRemove,
 }) => {
   const { triggerChordInLine } = usePadStore();
   const [isPressed, setIsPressed] = useState(false);
@@ -33,36 +32,38 @@ export const ChordPad: React.FC<ChordPadProps> = ({
   };
 
   return (
-    <div className="relative group flex-1 min-w-[90px] max-w-[140px]">
+    <div className="relative group flex-1 min-w-[95px] max-w-[145px]">
       <button
         id={`pad-line-${lineIndex}-chord-${index}`}
         onPointerDown={handlePress}
         className={`
           relative w-full h-24 sm:h-28 rounded-2xl border-2 transition-all duration-150 select-none
-          flex flex-col items-center justify-between p-3.5 overflow-hidden
+          flex flex-col items-center justify-between p-3.5 overflow-hidden transform active:scale-95
           ${isActive
             ? 'bg-[#D4AF37] border-[#F3E197] scale-[0.97] shadow-brass-glow-lg text-[#0B0C10]'
             : isPressed
-            ? 'bg-[#21242E] border-[#D4AF37] scale-[0.96]'
-            : 'bg-[#F5F2EB] border-[#2B2E38] text-[#121316] hover:border-[#D4AF37] hover:shadow-brass-glow hover:scale-[1.02] active:scale-[0.97]'
+            ? 'bg-[#21242E] border-[#D4AF37] scale-[0.95]'
+            : 'bg-[#F5F2EB] border-[#2B2E38] text-[#121316] hover:border-[#D4AF37] hover:shadow-brass-glow hover:scale-[1.03] active:scale-[0.96]'
           }
         `}
       >
         {/* Active glow overlay */}
         {isActive && (
-          <div className="absolute inset-0 bg-gradient-to-b from-[#F3E197]/30 to-transparent rounded-2xl pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#F3E197]/40 via-transparent to-[#0B0C10]/10 rounded-2xl pointer-events-none" />
         )}
 
         {/* Top Row: Hotkey Badge (A S D F G H J K) */}
         <div className="w-full flex items-center justify-between z-10">
           {hotkey ? (
-            <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-lg ${
+            <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-lg shadow-sm ${
               isActive ? 'bg-[#0B0C10] text-[#D4AF37]' : 'bg-[#2B2E38] text-[#D4AF37]'
             }`}>
               {hotkey}
             </span>
           ) : <span />}
-          <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#0B0C10]' : 'bg-[#D4AF37]'}`} />
+          <div className={`w-2.5 h-2.5 rounded-full transition-all ${
+            isActive ? 'bg-[#0B0C10] scale-110 animate-ping' : 'bg-[#D4AF37]'
+          }`} />
         </div>
 
         {/* Center: Big Clean Chord Name */}
@@ -73,19 +74,19 @@ export const ChordPad: React.FC<ChordPadProps> = ({
             {parsed.rootDisplay}
           </span>
           {parsed.quality && (
-            <span className={`font-mono font-bold text-sm sm:text-base ${isActive ? 'text-[#0B0C10]/80' : 'text-gray-600'}`}>
+            <span className={`font-mono font-bold text-sm sm:text-base ${isActive ? 'text-[#0B0C10]/90' : 'text-gray-600'}`}>
               {parsed.quality}
             </span>
           )}
           {parsed.bassDisplay && (
-            <span className={`font-mono text-xs sm:text-sm ml-0.5 ${isActive ? 'text-[#0B0C10]/70' : 'text-gray-400'}`}>
+            <span className={`font-mono text-xs sm:text-sm ml-0.5 ${isActive ? 'text-[#0B0C10]/80' : 'text-gray-400'}`}>
               /{parsed.bassDisplay}
             </span>
           )}
         </div>
 
         {/* Bottom Bar Accent */}
-        <div className={`w-8 h-1 rounded-full opacity-60 z-10 ${
+        <div className={`w-8 h-1 rounded-full opacity-70 z-10 ${
           isActive ? 'bg-[#0B0C10]' : 'bg-[#2B2E38]'
         }`} />
       </button>

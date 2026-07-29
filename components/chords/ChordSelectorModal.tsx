@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { NOTE_NAMES, NoteName } from '../../lib/music/chords';
-import { audioEngine } from '../../lib/audio/engine';
-import { Volume2, X, Check, Music2 } from 'lucide-react';
+import { usePadStore } from '../../store/usePadStore';
+import { padEngine } from '../../lib/audio/padEngine';
+import { translations } from '../../lib/i18n/translations';
+import { Volume2, X, Music2 } from 'lucide-react';
 
 interface ChordSelectorModalProps {
   isOpen: boolean;
@@ -14,13 +16,13 @@ interface ChordSelectorModalProps {
 }
 
 const QUALITIES = [
-  { label: 'Trưởng (Major)', value: '' },
-  { label: 'Thứ (Minor)', value: 'm' },
-  { label: 'Bảy (7)', value: '7' },
-  { label: 'Major 7 (Maj7)', value: 'maj7' },
+  { label: 'Major', value: '' },
+  { label: 'Minor (m)', value: 'm' },
+  { label: 'Dominant 7', value: '7' },
+  { label: 'Major 7 (maj7)', value: 'maj7' },
   { label: 'Minor 7 (m7)', value: 'm7' },
-  { label: 'Giảm (Dim)', value: 'dim' },
-  { label: 'Tăng (Aug)', value: 'aug' },
+  { label: 'Diminished (dim)', value: 'dim' },
+  { label: 'Augmented (aug)', value: 'aug' },
   { label: 'Sus 2', value: 'sus2' },
   { label: 'Sus 4', value: 'sus4' },
   { label: 'Add 9', value: 'add9' },
@@ -33,18 +35,20 @@ export const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({
   initialChord = 'C',
   initialBeats = 4,
 }) => {
-  // Parse initial chord
+  const { audioSettings, language } = usePadStore();
+  const t = translations[language];
+
   const [root, setRoot] = useState<NoteName>('C');
   const [quality, setQuality] = useState<string>('');
   const [bass, setBass] = useState<string>('');
-  const [beats, setBeats] = useState<number>(initialBeats);
+  const [beats] = useState<number>(initialBeats);
 
   if (!isOpen) return null;
 
   const currentChordString = `${root}${quality}${bass ? `/${bass}` : ''}`;
 
   const handlePreview = () => {
-    audioEngine.playChordPreview(currentChordString);
+    padEngine.triggerChordPad(currentChordString, audioSettings);
   };
 
   const handleSave = () => {
@@ -60,7 +64,7 @@ export const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({
           <div className="flex items-center gap-2">
             <Music2 className="w-5 h-5 text-[#D4AF37]" />
             <h3 className="font-display font-bold text-lg text-[#F5F2EB]">
-              Chọn Hợp Âm Piano
+              {t.selectChordTitle}
             </h3>
           </div>
           <button
@@ -75,7 +79,7 @@ export const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({
         <div className="bg-[#0B0C10] border border-[#2B2E38] rounded-xl p-4 flex items-center justify-between">
           <div>
             <span className="text-xs font-mono text-gray-400 block uppercase">
-              Hợp Âm Đang Chọn
+              {t.selectChordTitle}
             </span>
             <span className="font-display font-bold text-3xl text-[#D4AF37]">
               {currentChordString}
@@ -87,24 +91,24 @@ export const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-[#21242E] hover:bg-[#2B2E38] text-[#F3E197] rounded-xl font-mono text-xs border border-[#2B2E38] transition-all hover:scale-105"
           >
             <Volume2 className="w-4 h-4 text-[#D4AF37]" />
-            Nghe Thử
+            <span>Test</span>
           </button>
         </div>
 
         {/* Root Note Picker */}
         <div>
           <label className="text-xs font-mono text-gray-400 block mb-2 uppercase">
-            1. Chọn Nốt Gốc (Root)
+            1. {t.rootNote}
           </label>
           <div className="grid grid-cols-6 gap-2">
             {NOTE_NAMES.map((n) => (
               <button
                 key={n}
                 onClick={() => setRoot(n)}
-                className={`py-2 rounded-lg font-mono font-bold text-sm transition-all border ${
+                className={`py-2 rounded-xl font-mono font-bold text-sm border transition-all ${
                   root === n
-                    ? 'bg-[#D4AF37] text-[#0B0C10] border-[#D4AF37] shadow-brass-glow'
-                    : 'bg-[#0B0C10] text-[#F5F2EB] border-[#2B2E38] hover:border-[#D4AF37]/50'
+                    ? 'bg-[#D4AF37] text-[#0B0C10] border-[#F3E197] shadow-brass-glow'
+                    : 'bg-[#0B0C10] text-gray-300 border-[#2B2E38] hover:border-gray-500'
                 }`}
               >
                 {n}
@@ -116,61 +120,70 @@ export const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({
         {/* Quality Picker */}
         <div>
           <label className="text-xs font-mono text-gray-400 block mb-2 uppercase">
-            2. Chọn Loại Hợp Âm (Quality)
+            2. {t.chordQuality}
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 gap-2">
             {QUALITIES.map((q) => (
               <button
                 key={q.value}
                 onClick={() => setQuality(q.value)}
-                className={`py-2 px-3 rounded-lg text-xs font-mono text-left transition-all border flex items-center justify-between ${
+                className={`py-2 px-3 rounded-xl font-mono text-xs border text-left transition-all ${
                   quality === q.value
-                    ? 'bg-[#21242E] text-[#D4AF37] border-[#D4AF37]'
-                    : 'bg-[#0B0C10] text-gray-300 border-[#2B2E38] hover:border-[#2B2E38]'
+                    ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] font-bold'
+                    : 'bg-[#0B0C10] text-gray-400 border-[#2B2E38] hover:border-gray-600'
                 }`}
               >
-                <span>{q.label}</span>
-                {quality === q.value && <Check className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                {q.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Beats Picker */}
+        {/* Slash Bass Picker */}
         <div>
           <label className="text-xs font-mono text-gray-400 block mb-2 uppercase">
-            3. Độ Dài Phách (Beats)
+            3. {t.bassNote}
           </label>
-          <div className="flex items-center gap-3">
-            {[1, 2, 3, 4, 6].map((b) => (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setBass('')}
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs border flex-shrink-0 transition-all ${
+                !bass
+                  ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] font-bold'
+                  : 'bg-[#0B0C10] text-gray-500 border-[#2B2E38]'
+              }`}
+            >
+              None
+            </button>
+            {NOTE_NAMES.map((n) => (
               <button
-                key={b}
-                onClick={() => setBeats(b)}
-                className={`flex-1 py-2 rounded-lg font-mono font-bold text-sm border transition-all ${
-                  beats === b
-                    ? 'bg-[#D4AF37] text-[#0B0C10] border-[#D4AF37]'
-                    : 'bg-[#0B0C10] text-gray-300 border-[#2B2E38]'
+                key={n}
+                onClick={() => setBass(n)}
+                className={`px-3 py-1.5 rounded-lg font-mono text-xs border flex-shrink-0 transition-all ${
+                  bass === n
+                    ? 'bg-[#D4AF37] text-[#0B0C10] border-[#F3E197] font-bold shadow-brass-glow'
+                    : 'bg-[#0B0C10] text-gray-400 border-[#2B2E38]'
                 }`}
               >
-                {b} Phách
+                /{n}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Footer Actions */}
         <div className="flex items-center justify-end gap-3 border-t border-[#2B2E38] pt-4">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-mono text-gray-400 hover:text-white hover:bg-[#21242E] transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-mono text-gray-400 hover:text-white transition-colors"
           >
-            Hủy Bỏ
+            {t.cancel}
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2.5 rounded-xl text-sm font-bold bg-[#D4AF37] text-[#0B0C10] hover:bg-[#F3E197] transition-all shadow-brass-glow hover:scale-105"
+            className="px-6 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#F3E197] text-[#0B0C10] font-bold text-sm shadow-brass-glow transition-all hover:scale-105"
           >
-            Xác Nhận Hợp Âm
+            {t.saveChord}
           </button>
         </div>
       </div>

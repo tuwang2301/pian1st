@@ -8,6 +8,7 @@ import { AudioControls } from '../components/audio/AudioControls';
 import { VirtualKeyboard } from '../components/piano/VirtualKeyboard';
 import { MetronomeBar } from '../components/metronome/MetronomeBar';
 import { ALL_KEYS, NoteName } from '../lib/music/chords';
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { Music, Plus, Keyboard, SlidersHorizontal } from 'lucide-react';
 
 export default function Home() {
@@ -106,6 +107,9 @@ export default function Home() {
 
           {/* Right Controls */}
           <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Presets */}
             <button
               onClick={loadTheGioiHoanHaoPreset}
